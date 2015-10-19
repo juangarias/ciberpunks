@@ -13,6 +13,10 @@ Instalar pip (para poder instalar fácilmente todas las otras dependencias)
 
 ###Uso
 
+#####window_input.py
+Es la interfaz de consola que permite ingresar un nombre y un e-mail. Luego toma una foto del sujeto.
+Finalmente, guarda la foto con el nombre del sujeto en una carpeta de salida.
+
 #####face_collector.py
 Permite detectar caras de una entrada (video o webcam) y guardarlas en una carpeta destino.
 Las guarda recortadas y estandarizadas para luego poder compararlas.
