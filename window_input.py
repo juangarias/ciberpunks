@@ -3,7 +3,7 @@
 import argparse, logging, os, sys
 import cv2
 from curses import *
-from common import configureLogging, calculateScaledSize
+from common import configureLogging, calculateScaledSize, drawLabel
 
 ESCAPE_KEY = 27
 ENTER_KEY = 10
@@ -76,7 +76,9 @@ def getUserPicture(outputWidth):
   key = -1
 
   while key != ENTER_KEY and readOk:
-    cv2.imshow(picWin, cv2.resize(image, outputSize))
+    image = cv2.resize(image, outputSize)
+    drawLabel("Presione [Enter]...", image, (int(outputWidth/3), 50))
+    cv2.imshow(picWin, image)
     key = cv2.waitKey(5) % 256
     readOk, image = camera.read()
 
