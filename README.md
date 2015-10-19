@@ -4,8 +4,8 @@
 ###Dependencias
 Instalar pip (para poder instalar fácilmente todas las otras dependencias)
 
-* cv2
-* numpy
+* cv2 (2.4.11 http://opencv.org/)
+* numpy (Debería venir junto con cv2)
 * pyinotify (https://github.com/seb-m/pyinotify)
 * urllib2
 * pyttsx

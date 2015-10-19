@@ -146,7 +146,8 @@ def main():
 
       drawThanksWindow(stdscr)
 
-  except KeyboardInterrupt:
+  except:
+    logging.error("Unexpected error")
     pass
 
   cv2.destroyAllWindows()
