@@ -47,20 +47,19 @@ def main():
 
   rectColor = (120,120,120)
   rectThickness = 2
-  formatParams = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+  formatParams = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
 
   width = capture.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)
   logging.debug("Image width {0}".format(width))
   minFaceSize = (int(width * 0.1), int(width * 0.1))
   minEyeSize = (12, 18)
 
-  readOk = True
   contador = 1
   frameCount = 0
 
   logging.debug("Reading capture...")
   readOk, image = capture.read()
-  outputSize = calculateScaledSize(image, int(args.outputWidth))
+  outputSize = calculateScaledSize(int(args.outputWidth), image=image)
 
   while (cv2.waitKey(5)==-1 and readOk):
 

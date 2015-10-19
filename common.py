@@ -37,8 +37,16 @@ def drawLabel(text, image, position):
   cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0, image)
 
 
-def calculateScaledSize(image, outputWidth):
-  height, width = image.shape[:2]
+def calculateScaledSize(outputWidth, image=None, capture=None):
+  if not image is None:
+    height, width = image.shape[:2]
+  elif not capture is None:
+    height = capture.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
+    width = capture.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)
+  else:
+    logging.error("Both arguments cannot be None.")
+    raise ValueError("image or capture must be something")
+
   proportionalHeight = int(outputWidth * height / width)
   return (outputWidth, proportionalHeight)
 

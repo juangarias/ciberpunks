@@ -1,14 +1,15 @@
 # Colectivo Dominio Público
 ## Instalación ciberpunks
 
-###Instalación
-* Clonar el repositorio
-* Instalar cv2
-* Instalar numpy
-* Instalar pyinotify (https://github.com/seb-m/pyinotify)
-* Instalar urllib2
-* Instalar pyttsx
-* Instalar BeautifulSoup
+###Dependencias
+Instalar pip (para poder instalar fácilmente todas las otras dependencias)
+
+* cv2
+* numpy
+* pyinotify (https://github.com/seb-m/pyinotify)
+* urllib2
+* pyttsx
+* BeautifulSoup
 
 ###Uso
 

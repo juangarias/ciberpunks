@@ -36,7 +36,7 @@ class StoppableThread(threading.Thread):
       while not self.stopped():
         pos = randint(0, len(self.faces) - 1)
         img = self.faces[pos]
-        outputSize = calculateScaledSize(img, self.outputWidth)
+        outputSize = calculateScaledSize(self.outputWidth, image=img)
         cv2.imshow(self.listFacesWindow, cv2.resize(img, outputSize))
         cv2.waitKey(50)
 
@@ -79,7 +79,7 @@ class NewFaceDetectedEventHandler(pyinotify.ProcessEvent):
     image = cv2.imread(pictureFilename)
 
     if not image is None:
-      outputSize = calculateScaledSize(image, self.outputWidth)
+      outputSize = calculateScaledSize(self.outputWidth, image=image)
 
       detectedFaces = detectFaces(image, self.faceCascade, self.leftEyeCascade, self.rightEyeCascade, (50, 50))
       self.drawFaceDecorations(image, detectedFaces)

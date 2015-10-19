@@ -1,60 +1,156 @@
 #!/usr/bin/python
 
 import argparse, logging, os, sys
+import cv2
 from curses import *
-import curses.textpad
+from common import configureLogging, calculateScaledSize
 
 ESCAPE_KEY = 27
 ENTER_KEY = 10
 BACKSPACE_KEY = 263
 
-stdscr = initscr()
-noecho()
-cbreak()
-stdscr.keypad(1)
-stdscr.border(0)
-start_color()
 
-stdscr.addstr(4, 20, "================================")
-stdscr.addstr(5, 20, "|| BIENVENIDOS A CIBERSYBERIA ||")
-stdscr.addstr(6, 20, "================================")
+def configureArguments():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--outFolder', help="Folder for writing collected faces.", 
+    default="/home/juan/ciberpunks/faces/news")
+  parser.add_argument('--outputWidth', help="Output with for images to display in windows.", default="600")
+  parser.add_argument('--log', help="Log level for logging.", default="WARNING")
+  return parser.parse_args()
 
-stdscr.addstr(9, 20, "Ingrese su nombre: ")
-echo()
 
-while c != 10:
+def readInput(stdscr, y, x):
+  stdscr.move(y, x)
+  value = ''
   c = stdscr.getch()
 
+  while c != 10:
+    if c < 256:
+      value += chr(c)
+    c = stdscr.getch()
+
+  return value
+
+
+def drawInputWindow(stdscr):
+  stdscr.clear()
+  (h, w) = stdscr.getmaxyx()
+  yPos = int(h*0.4)
+  xPos = int (w*0.4)
+
+  stdscr.addstr(yPos, xPos, "================================")
+  yPos += 1
+  stdscr.addstr(yPos, xPos, "|| BIENVENIDOS A CyBerSiBeriA ||")
+  yPos += 1
+  stdscr.addstr(yPos, xPos, "================================")
+  yPos += 1
+
+  stdscr.addstr(yPos, xPos, "Ingrese su nombre: ")
+  (nameY, nameX) = stdscr.getyx()
+  yPos += 1
+  stdscr.addstr(yPos, xPos, "Ingrese su e-mail: ")
+  (emailY, emailX) = stdscr.getyx()
+  yPos += 1
+
+  echo()
+  name = readInput(stdscr, nameY, nameX)
+  email = readInput(stdscr, emailY, emailX)
+
+  return name, email
   
 
-  stdscr.addstr(y, 20, "Key: {0}".format(c))
-  y += 1
+def getUserPicture(outputWidth):
+  camera = cv2.VideoCapture(0)
+  outputSize = calculateScaledSize(outputWidth, capture=camera)
+
+  if not camera.isOpened():
+    logging.error("Arrgghhh! The camera is not working!")
+    return None
+
+  picWin = "Sonria..."
+  cv2.namedWindow(picWin)
+
+  logging.debug("Reading camera...")
+  readOk, image = camera.read()
+
+  key = -1
+
+  while key != ENTER_KEY and readOk:
+    cv2.imshow(picWin, cv2.resize(image, outputSize))
+    key = cv2.waitKey(5) % 256
+    readOk, image = camera.read()
+
+  cv2.destroyAllWindows()
+  cv2.waitKey(1)
+  cv2.waitKey(2)
+  cv2.waitKey(3)
+
+  return image
 
 
-'''
-begin_x = 20; begin_y = 7
-height = 5; width = 40
-win = newwin(height, width, begin_y, begin_x)
-win.border(0)
-
-c = 1
-while c != ord('q'):
-  c = win.getch()
-  if ord('w') == c:
-    begin_y -= 1
-  elif ord('s') == c:
-    begin_y += 1
-  elif ord('a') == c:
-    begin_x -= 1
-  elif ord('d') == c:
-    begin_x += 1
-
+def drawThanksWindow(stdscr):
   stdscr.clear()
-  win.mvwin(begin_y, begin_x)
-'''
+  (h, w) = stdscr.getmaxyx()
+  yPos = int(h*0.4)
+  xPos = int (w*0.4)
 
-stdscr.keypad(0)
-nocbreak()
-echo()
-endwin()
-os.system('stty sane')
+  stdscr.addstr(yPos, xPos, "================================")
+  yPos += 1
+  stdscr.addstr(yPos, xPos, "||       MUCHAS GRACIAS       ||")
+  yPos += 1
+  stdscr.addstr(yPos, xPos, "================================")
+  yPos += 1
+
+  noecho()
+
+  c = 0 
+  while c != 10:
+    c = stdscr.getch()
+
+
+def destroyCurses():
+  nocbreak()
+  echo()
+  endwin()  
+  os.system('stty sane')
+
+
+def main():
+  try:
+    args = configureArguments()
+    configureLogging(args.log)
+
+    stdscr = initscr()
+    noecho()
+    cbreak()
+    start_color()
+
+    stdscr.keypad(1)
+    stdscr.border(0)
+    stdscr.box()
+
+    while True:
+      name = ''
+      email = ''
+
+      while not name and not email:
+        (name, email) = drawInputWindow(stdscr)
+
+      img = getUserPicture(int(args.outputWidth))
+
+      formatParams = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
+      name = name.replace(" ", "_")
+      cv2.imwrite(args.outFolder + '/' + name + '.jpg', img, formatParams)
+
+      drawThanksWindow(stdscr)
+
+  except KeyboardInterrupt:
+    pass
+
+  cv2.destroyAllWindows()
+  destroyCurses()
+
+    
+  
+if __name__ == '__main__':
+  main()
