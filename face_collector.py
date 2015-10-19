@@ -1,5 +1,4 @@
 #!/usr/bin/python
-#!/usr/bin/env python
 
 import sys, time, Image, logging, argparse
 import cv2
@@ -66,9 +65,10 @@ def main():
 
   frameCount = 0
 
+  logging.debug("Reading capture...")
+  readOk, image = capture.read()
+
   while (cv2.waitKey(15)==-1 and readOk):
-    logging.debug("Reading capture...")
-    readOk, image = capture.read()
 
     #Skip 2 of 3 frames
     if frameCount % 3 == 0 :
@@ -89,12 +89,13 @@ def main():
     cv2.imshow(windowTitle, image)
     frameCount += 1
 
+    logging.debug("Reading capture...")
+    readOk, image = capture.read()
+
+
   del(capture)
   cv2.destroyWindow(windowTitle)
-#end main
 
-#----------
-# M A I N
-#----------
+
 if __name__ == '__main__':
   main()

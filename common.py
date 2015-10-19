@@ -37,6 +37,11 @@ def drawLabel(text, image, position):
   cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0, image)
 
 
+def calculateScaledSize(image, outputWidth):
+  height, width = image.shape[:2]
+  proportionalHeight = int(outputWidth * height / width)
+  return (outputWidth, proportionalHeight)
+
 def resizeImage(image, size):
   # resize to given size (if given)
   if (size is None):
@@ -61,9 +66,10 @@ def readImages(paths, sz=None):
   subjectId = 0
   images,labels, subjects = [], [], []
   for path in paths:
+    logging.debug('Reading files from {0}'.format(path))
     fileCount = 0
     totalFilesCount = sum([len(files) for r, d, files in os.walk(path)])
-    print('Reading directory {0}... '.format(path))
+    print 'Reading directory {0}... '.format(path)
     for dirname, dirnames, filenames in os.walk(path):
       for subdirname in dirnames:
         subject_path = os.path.join(dirname, subdirname)
