@@ -14,7 +14,7 @@ def configureArguments():
     default='/home/juan/ciberpunks/faces/news')
   parser.add_argument('--haarFolder', help="Folder containing HAAR cascades.", 
     default="/home/juan/ciberpunks/opencv-2.4.11/data/haarcascades")
-  parser.add_argument('--outputWidth', help="Log level for logging.", default="640")
+  parser.add_argument('--outputWidth', help="Output with for images to display in windows.", default="350")
   parser.add_argument('--log', help="Log level for logging.", default="WARNING")
 
   return parser.parse_args()
@@ -61,28 +61,33 @@ class NewFaceDetectedEventHandler(pyinotify.ProcessEvent):
 
 
   def drawFaceDecorations(self, image, detectedFaces):
-    rectColor = (120, 120, 120)
-    rectThickness = 2
+    color = (120, 120, 120)
+    thickness = 1
 
-    for (x, y, w, h, leftEyes, rightEyes) in detectedFaces:
-      cv2.rectangle(image, (x,y), (x+w,y+h), rectColor, rectThickness)
+    for (x, y, w, h, leftEye, rightEye, _) in detectedFaces:
+      cv2.rectangle(image, (x,y), (x+w,y+h), color, thickness)
 
-      for (eyeX, eyeY, eyeW, eyeH) in leftEyes:
-        cv2.rectangle(image, (x+eyeX, y+eyeY), (x+eyeX+eyeW,y+eyeY+eyeH), rectColor, rectThickness)
+      (eyeX, eyeY, eyeW, eyeH) = leftEye
+      cv2.rectangle(image, (x+eyeX, y+eyeY), (x+eyeX+eyeW,y+eyeY+eyeH), color, thickness)
+
+      (eyeX, eyeY, eyeW, eyeH) = rightEye
+      cv2.rectangle(image, (x+eyeX, y+eyeY), (x+eyeX+eyeW,y+eyeY+eyeH), color, thickness)
 
 
   def newSubject(self, pictureFilename):
+    logging.debug('New subject detected. Filename {0}'.format(pictureFilename))
     image = cv2.imread(pictureFilename)
 
-    outputSize = calculateScaledSize(image, self.outputWidth)
+    if not image is None:
+      outputSize = calculateScaledSize(image, self.outputWidth)
 
-    detectedFaces = detectFaces(image, self.faceCascade, self.leftEyeCascade, self.rightEyeCascade, (50, 50))
-    self.drawFaceDecorations(image, detectedFaces)
+      detectedFaces = detectFaces(image, self.faceCascade, self.leftEyeCascade, self.rightEyeCascade, (50, 50))
+      self.drawFaceDecorations(image, detectedFaces)
 
-    cv2.imshow(self.mainWindow, cv2.resize(image, outputSize))
+      cv2.imshow(self.mainWindow, cv2.resize(image, outputSize))
 
-    self.thread = StoppableThread(self.listFacesWindow, self.faces, self.outputWidth)
-    self.thread.start()
+      self.thread = StoppableThread(self.listFacesWindow, self.faces, self.outputWidth)
+      self.thread.start()
 
 
   def process_IN_CREATE(self, event):

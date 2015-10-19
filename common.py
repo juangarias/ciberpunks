@@ -94,7 +94,8 @@ def readImages(paths, sz=None):
   return [images, np.asarray(labels, dtype=np.int32), subjects]
 
 
-def detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize = (100, 100), minEyeSize = (12, 18)):
+def detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, 
+  minFaceSize = (100, 100), minEyeSize = (12, 18), mouthCascade = None):
   logging.debug("Detecting faces...")
   faceCandidates = detectElements(image, faceCascade, minFaceSize, 0)
   faces = []
@@ -108,8 +109,17 @@ def detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize
     rightEyes = detectElements(faceUpper, rightEyeCascade, minEyeSize, 0)
 
     if len(leftEyes) > 0 and len(rightEyes) > 0:
-      logging.info("Detected face with {0} right eyes and {1} left eyes.".format(len(rightEyes), len(rightEyes)))
-      faces.append((x, y, w, h, leftEyes, rightEyes))
+      logging.info("Detected possible face with {0} right eyes and {1} left eyes.".format(len(rightEyes), len(rightEyes)))
+
+      if not mouthCascade is None:
+        faceLower = tempFace[int(6.5*h/10):h, 0:w]
+        mouths = detectElements(faceLower, mouthCascade, minFaceSize, 0)
+
+        if len(mouths) > 1:
+          logging.info("Detected face with {0} mouths.".format(len(mouths)))
+          faces.append((x, y, w, h, leftEyes[0], rightEyes[0], mouths))
+      else:
+        faces.append((x, y, w, h, leftEyes[0], rightEyes[0], None))
 
   return faces
 
@@ -173,7 +183,7 @@ def ScaleRotateTranslate(image, angle, center = None, new_center = None, scale =
   return image.transform(image.size, Image.AFFINE, (a,b,c,d,e,f), resample=resample)
 
 
-def cropFace(image, eye_left, eye_right, offset_pct=(0.25,0.25), dest_sz = (92,112)):
+def cropFace(image, eye_left, eye_right, offset_pct=(0.3,0.3), dest_sz = (92,112)):
   image = Image.fromarray(np.uint8(image))
   # calculate offsets in original image
   offset_h = math.floor(float(offset_pct[0])*dest_sz[0])
