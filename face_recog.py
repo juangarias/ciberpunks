@@ -11,6 +11,7 @@ def configureArguments():
   parser.add_argument('--haarFolder', help="Folder containing HAAR cascades.", 
     default="/home/juan/ciberpunks/opencv-2.4.11/data/haarcascades")
   parser.add_argument('--log', help="Log level for logging.", default="WARNING")
+
   return parser.parse_args()
 
 
@@ -35,22 +36,31 @@ def recognizeVideo(faceRecognizer, videoFileName, subjects, haarFolder):
   leftEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_lefteye_2splits.xml")
   rightEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_righteye_2splits.xml")
 
+  if not videoFileName:
+    videoFileName = 0
+
   capture = cv2.VideoCapture(videoFileName)
-  readOk = True
+  readOk, image = capture.read()
 
-  title = 'Face Recognizer App'
-  cv2.namedWindow(title)
+  if readOk:
+    height, width, channels = image.shape
+  else:
+    logging.warning("Could not read capture!!")
+    return
 
+  minFaceSize = (int(width * 0.1), int(width * 0.1))
   rectColor = (255, 0, 0)
   rectThickness = 2
   fontColor = (255, 255, 255)
   fontScale = 0.8
   fontThickness = 1
 
-  while cv2.waitKey(10) == -1 and readOk:
-    readOk, image = capture.read()
+  title = 'Face Recognizer App'
+  cv2.namedWindow(title)
 
-    faces = detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade)
+  while cv2.waitKey(10) == -1 and readOk:
+
+    faces = detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize)
 
     if len(faces) == 0 :
       for i in xrange(0, 3):
@@ -71,6 +81,7 @@ def recognizeVideo(faceRecognizer, videoFileName, subjects, haarFolder):
         drawLabel(predictionLegend, image, (x-20, y-10))
     
     cv2.imshow(title, image)
+    readOk, image = capture.read()
 
   cv2.destroyWindow(title)
   
@@ -93,8 +104,8 @@ def main():
   #  logging.info('Loaded saved model state.')
   #else:
   trainPaths = [
-    #'/home/juan/ciberpunks/faces/at&t_database', 
-    #'/home/juan/ciberpunks/faces/lfw2', 
+    '/home/juan/ciberpunks/faces/at&t_database', 
+    '/home/juan/ciberpunks/faces/lfw2', 
     '/home/juan/ciberpunks/faces/prestico']
 
   [images, labels, subjects] = readImages(trainPaths, faceSize)
