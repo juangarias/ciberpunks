@@ -135,7 +135,7 @@ def main():
       name = ''
       email = ''
 
-      while not name and not email:
+      while not name or not email:
         (name, email) = drawInputWindow(stdscr)
 
       img = getUserPicture(int(args.outputWidth))
@@ -143,6 +143,8 @@ def main():
       formatParams = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
       name = name.replace(" ", "_")
       cv2.imwrite(args.outFolder + '/' + name + '.jpg', img, formatParams)
+
+      #TODO: El nombre queda en la foto, pero falta guardar el e-mail.- jarias
 
       drawThanksWindow(stdscr)
 
