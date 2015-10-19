@@ -5,6 +5,8 @@
 Instalar pip (para poder instalar fácilmente todas las otras dependencias)
 
 * cv2 (2.4.11 http://opencv.org/)
+** Hay que descargar los binarios, para poder usar la librería
+** Y también hay que descargar los HAAR files (para detección de objetos) que vienen con los fuentes.
 * numpy (Debería venir junto con cv2)
 * pyinotify (https://github.com/seb-m/pyinotify)
 * urllib2
