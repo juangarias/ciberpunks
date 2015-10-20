@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import argparse, logging, os, sys
+sys.path.append("../")
 from common import calculateScaledSize
 import cv2
 

@@ -10,6 +10,17 @@ def configureLogging(loglevel):
   logging.basicConfig(level=numeric_level, format='%(levelname)s:%(funcName)s:%(message)s')
 
 
+def encodeSubjectPictureName(name, email):
+  return name.replace(' ', '_') + '-' + email
+
+
+def decodeSubjectPictureName(filename):
+  data = filename.split('-')
+  name = data[0].replace('_', ' ')
+  email = data[1]
+  return name, email
+
+
 def loadCascadeClassifier(filename):
   cascade = cv2.CascadeClassifier(filename)
   if cascade.empty():
@@ -18,8 +29,12 @@ def loadCascadeClassifier(filename):
   return cascade
 
 
-def drawLabel(text, image, position):
-  fontFace = cv2.FONT_HERSHEY_SIMPLEX
+def drawRectangle(image, square, color, thickness):
+  (x,y,w,h) = square
+  cv2.rectangle(image, (x,y), (x+w,y+h), color, thickness)
+
+
+def drawLabel(text, image, position, fontFace=cv2.FONT_HERSHEY_SIMPLEX):
   scale = 0.6;
   thickness = 1;
   filledThickness = -1
@@ -102,10 +117,23 @@ def readImages(paths, sz=None):
   return [images, np.asarray(labels, dtype=np.int32), subjects]
 
 
-def detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, 
-  minFaceSize = (100, 100), minEyeSize = (12, 18), mouthCascade = None):
+def shiftElementCoords(elements, offset):
+  return [shiftCoords(x, offset) for x in elements]
+
+
+def shiftCoords(square, offset):
+  (xBase,yBase) = offset
+  (x, y, h, w) = square
+
+  return (xBase+x, yBase+y, h, w)
+
+
+
+def detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize = (100, 100), 
+  minEyeSize = (12, 18), mouthCascade = None):
+  
   logging.debug("Detecting faces...")
-  faceCandidates = detectElements(image, faceCascade, minFaceSize, 0)
+  faceCandidates = detectElements(image, faceCascade, minFaceSize)
   faces = []
 
   for (x, y, w, h) in faceCandidates:
@@ -113,28 +141,33 @@ def detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade,
     tempFace = image[y:y+h, x:x+w]
     faceUpper = tempFace[0:int(6*h/10), 0:w]
 
-    leftEyes = detectElements(faceUpper, leftEyeCascade, minEyeSize, 0)
-    rightEyes = detectElements(faceUpper, rightEyeCascade, minEyeSize, 0)
+    leftEyesUpper = detectElements(faceUpper, leftEyeCascade, minEyeSize)
+    rightEyesUpper = detectElements(faceUpper, rightEyeCascade, minEyeSize)
 
-    if len(leftEyes) > 0 and len(rightEyes) > 0:
-      logging.info("Detected possible face with {0} right eyes and {1} left eyes.".format(len(rightEyes), len(rightEyes)))
+    if len(leftEyesUpper) <= 0 or len(rightEyesUpper) <= 0:
+      continue
 
-      if not mouthCascade is None:
-        faceLower = tempFace[int(6.5*h/10):h, 0:w]
-        mouths = detectElements(faceLower, mouthCascade, minFaceSize, 0)
+    leftEyes = shiftElementCoords(leftEyesUpper, (x,y))
+    rightEyes = shiftElementCoords(rightEyesUpper, (x,y))
 
-        if len(mouths) > 1:
-          logging.info("Detected face with {0} mouths.".format(len(mouths)))
-          faces.append((x, y, w, h, leftEyes[0], rightEyes[0], mouths))
-      else:
-        faces.append((x, y, w, h, leftEyes[0], rightEyes[0], None))
+    mouths = None
+
+    logging.info("Detected possible face with {0} right eyes and {1} left eyes.".format(len(rightEyes), len(rightEyes)))
+
+    if not mouthCascade is None:
+      faceLower = tempFace[int(6.5*h/10):h, 0:w]
+      mouthsLower = detectElements(faceLower, mouthCascade, minFaceSize, 0)
+      mouths = shiftElementCoords(mouthsLower, (x,y))
+      logging.info("Detected face with {0} mouths.".format(len(mouths)))
+    
+    faces.append((x, y, w, h, leftEyes[0], rightEyes[0], mouths))
 
   return faces
 
 
 def detectElements(image, elementCascade, minSizeElem, recursiveSizeStep=0):
   haar_scale = 1.1
-  min_neighbors = 3
+  min_neighbors = 5
 
   # Convert color input image to grayscale
   gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

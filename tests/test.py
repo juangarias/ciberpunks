@@ -1,8 +1,10 @@
 #!/usr/bin/python
-
 import sys, time, Image, logging, argparse
+sys.path.append("../")
+import numpy
 import cv2
-from common import detectElements, configureLogging, detectFaces, calculateCenter, cropFace, loadCascadeClassifier, calculateScaledSize
+from common import (detectElements, configureLogging, detectFaces, calculateCenter, cropFace, 
+  loadCascadeClassifier, calculateScaledSize, drawRectangle, drawLabel)
 
 
 def main():
@@ -14,13 +16,12 @@ def main():
   leftEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_lefteye_2splits.xml")
   rightEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_righteye_2splits.xml")
   mouthCascade = loadCascadeClassifier(haarFolder + '/haarcascade_mcs_mouth.xml')
-  
 
-  color = (120,120,120)
-  thickness = 1
+  color = (120,120,255)
+  thickness = 2
 
   for i in xrange(1, 10):
-    image = cv2.imread('/home/juan/ciberpunks/faces/at&t_database/s12/{0}.pgm'.format(i))
+    image = cv2.imread('/home/juan/ciberpunks/faces/at&t_database/s10/{0}.pgm'.format(i))
     image = cv2.resize(image, calculateScaledSize(400, image=image))
 
     if image is None:
@@ -30,36 +31,36 @@ def main():
     minFaceSize = (10, 10)
     minEyeSize = (12, 18)
 
-    faces = detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize, minEyeSize, mouthCascade)
+    faces = detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize, minEyeSize, None)
 
-    for (x, y, w, h, leftEye, rightEye, mouth) in faces:
+    for (x, y, w, h, leftEye, rightEye, mouths) in faces:
       center = calculateCenter((x,y,w,h))
       box = None
-      cv2.ellipse(image, (center, (w, h + 15), 0), color, thickness)
+      cv2.ellipse(image, (center, (w, h + 100), 0), color, thickness)
 
-      (centerRX, centerRY) = calculateCenter(rightEye)
-      (centerLX, centerLY) = calculateCenter(leftEye)
+      #drawRectangle(image, rightEye, color, thickness)
+      #drawRectangle(image, leftEye, color, thickness)
+     
+      reCenter = calculateCenter(rightEye)
+      cv2.circle(image, reCenter, 5, color, 0)
+      cv2.ellipse(image, (reCenter, (rightEye[2], rightEye[3] - 30), 0), color, thickness)
 
-      (a,b,c,d) = rightEye
-      cv2.rectangle(image, (x+a,y+b), (x+a+c,y+b+d), color, thickness)
-      (a,b,c,d) = leftEye
-      cv2.rectangle(image, (x+a,y+b), (x+a+c,y+b+d), color, thickness)
+      leCenter = calculateCenter(leftEye)
+      cv2.circle(image, leCenter, 5, color, 0)
+      cv2.ellipse(image, (leCenter, (leftEye[2], leftEye[3] - 30), 0), color, thickness)
 
-      le = (x+centerLX,y+centerLY)
-      re = (x+centerRX,y+centerRY)
-      
-      cv2.circle(image, re, 5, color, 0)
-      cv2.circle(image, le, 5, color, 0)
+      cv2.line(image, leCenter, reCenter, color, 2)
 
-      cv2.line(image, le, re, color, 2)
+      if not mouths is None:
+        for m in mouths:
+          drawRectangle(image, m, (0, 255, 0), thickness)
 
-      baseY = int(6.5*h/10)
-      for (mx, my, mw, mh) in mouth:
-        cv2.rectangle(image, (x+mx,y+baseY+my), (x+mx+mw,y+baseY+my+mh), (0, 0, 255), thickness)
-
+    drawLabel("Scanning...", image, (100, 50), cv2.FONT_HERSHEY_SIMPLEX)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     cv2.imshow(windowTitle, image)
     cv2.waitKey(1000)
-    cv2.destroyWindow(windowTitle)
+    
+  cv2.destroyWindow(windowTitle)
 
 
 if __name__ == '__main__':

@@ -4,7 +4,8 @@ import argparse, logging, os, sys, threading
 from random import randint
 import pyinotify
 import cv2
-from common import configureLogging, loadCascadeClassifier, calculateScaledSize, readImages, detectFaces
+from common import (configureLogging, loadCascadeClassifier, calculateScaledSize, readImages, detectFaces, 
+  decodeSubjectPictureName, drawLabel)
 
 def configureArguments():
   parser = argparse.ArgumentParser()
@@ -60,9 +61,9 @@ class NewFaceDetectedEventHandler(pyinotify.ProcessEvent):
     self.thread = None
 
 
-  def drawFaceDecorations(self, image, detectedFaces):
+  def drawFaceDecorations(self, image, detectedFaces, name):
     color = (120, 120, 120)
-    thickness = 1
+    thickness = 2
 
     for (x, y, w, h, leftEye, rightEye, _) in detectedFaces:
       cv2.rectangle(image, (x,y), (x+w,y+h), color, thickness)
@@ -73,18 +74,23 @@ class NewFaceDetectedEventHandler(pyinotify.ProcessEvent):
       (eyeX, eyeY, eyeW, eyeH) = rightEye
       cv2.rectangle(image, (x+eyeX, y+eyeY), (x+eyeX+eyeW,y+eyeY+eyeH), color, thickness)
 
+      drawLabel(image, name, (x,y))
+
 
   def newSubject(self, pictureFilename):
     logging.debug('New subject detected. Filename {0}'.format(pictureFilename))
     image = cv2.imread(pictureFilename)
+    name, _ = decodeSubjectPictureName(pictureFilename)
 
     if not image is None:
       outputSize = calculateScaledSize(self.outputWidth, image=image)
 
       detectedFaces = detectFaces(image, self.faceCascade, self.leftEyeCascade, self.rightEyeCascade, (50, 50))
-      self.drawFaceDecorations(image, detectedFaces)
+      image = cv2.resize(image, outputSize)
+      
+      self.drawFaceDecorations(image, detectedFaces, name)
 
-      cv2.imshow(self.mainWindow, cv2.resize(image, outputSize))
+      cv2.imshow(self.mainWindow, image)
 
       self.thread = StoppableThread(self.listFacesWindow, self.faces, self.outputWidth)
       self.thread.start()

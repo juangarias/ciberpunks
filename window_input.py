@@ -3,7 +3,7 @@
 import argparse, logging, os, sys
 import cv2
 from curses import *
-from common import configureLogging, calculateScaledSize, drawLabel
+from common import configureLogging, encodeSubjectPictureName, calculateScaledSize, drawLabel
 
 ESCAPE_KEY = 27
 ENTER_KEY = 10
@@ -17,6 +17,9 @@ def configureArguments():
   parser.add_argument('--outputWidth', help="Output with for images to display in windows.", default="600")
   parser.add_argument('--log', help="Log level for logging.", default="WARNING")
   return parser.parse_args()
+
+
+
 
 
 def readInput(stdscr, y, x):
@@ -43,13 +46,15 @@ def drawInputWindow(stdscr):
   stdscr.addstr(yPos, xPos, "|| BIENVENIDOS A CyBerSiBeriA ||")
   yPos += 1
   stdscr.addstr(yPos, xPos, "================================")
-  yPos += 1
+  yPos += 3
 
   stdscr.addstr(yPos, xPos, "Ingrese su nombre: ")
   (nameY, nameX) = stdscr.getyx()
   yPos += 1
   stdscr.addstr(yPos, xPos, "Ingrese su e-mail: ")
   (emailY, emailX) = stdscr.getyx()
+  yPos += 3
+  stdscr.addstr(yPos, xPos, "===== NO enviamos spam... =====")
   yPos += 1
 
   echo()
@@ -60,18 +65,19 @@ def drawInputWindow(stdscr):
   
 
 def getUserPicture(outputWidth):
-  camera = cv2.VideoCapture(0)
-  outputSize = calculateScaledSize(outputWidth, capture=camera)
 
+  camera = cv2.VideoCapture(0)
+  
   if not camera.isOpened():
     logging.error("Arrgghhh! The camera is not working!")
     return None
 
-  picWin = "Sonria..."
-  cv2.namedWindow(picWin)
-
+  outputSize = calculateScaledSize(outputWidth, capture=camera)
   logging.debug("Reading camera...")
   readOk, image = camera.read()
+
+  picWin = "Sonria..."
+  cv2.namedWindow(picWin)
 
   key = -1
 
@@ -82,7 +88,7 @@ def getUserPicture(outputWidth):
     key = cv2.waitKey(5) % 256
     readOk, image = camera.read()
 
-  cv2.destroyAllWindows()
+  cv2.destroyWindow(picWin)
   cv2.waitKey(1)
   cv2.waitKey(2)
   cv2.waitKey(3)
@@ -141,10 +147,7 @@ def main():
       img = getUserPicture(int(args.outputWidth))
 
       formatParams = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
-      name = name.replace(" ", "_")
-      cv2.imwrite(args.outFolder + '/' + name + '.jpg', img, formatParams)
-
-      #TODO: El nombre queda en la foto, pero falta guardar el e-mail.- jarias
+      cv2.imwrite(args.outFolder + '/' + encodeSubjectPictureName(name, email) + '.jpg', img, formatParams)
 
       drawThanksWindow(stdscr)
 
