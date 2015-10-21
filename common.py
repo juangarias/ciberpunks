@@ -137,8 +137,7 @@ def shiftCoords(square, offset):
 
 
 
-def detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize = (100, 100), 
-  minEyeSize = (12, 18), mouthCascade = None):
+def detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize = (100, 100), minEyeSize = (12, 18)):
   
   logging.debug("Detecting faces...")
   faceCandidates = detectElements(image, faceCascade, minFaceSize)
@@ -158,17 +157,9 @@ def detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize
     leftEyes = shiftElementCoords(leftEyesUpper, (x,y))
     rightEyes = shiftElementCoords(rightEyesUpper, (x,y))
 
-    mouths = None
+    logging.info("Detected face with {0} right eyes and {1} left eyes.".format(len(rightEyes), len(rightEyes)))
 
-    logging.info("Detected possible face with {0} right eyes and {1} left eyes.".format(len(rightEyes), len(rightEyes)))
-
-    if not mouthCascade is None:
-      faceLower = tempFace[int(6.5*h/10):h, 0:w]
-      mouthsLower = detectElements(faceLower, mouthCascade, minFaceSize, 0)
-      mouths = shiftElementCoords(mouthsLower, (x,y))
-      logging.info("Detected face with {0} mouths.".format(len(mouths)))
-    
-    faces.append((x, y, w, h, leftEyes[0], rightEyes[0], mouths))
+    faces.append((x, y, w, h, leftEyes, rightEyes))
 
   return faces
 

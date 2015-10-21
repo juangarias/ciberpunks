@@ -80,6 +80,8 @@ class NewFaceDetectedEventHandler(pyinotify.ProcessEvent):
 
   def newSubject(self, pictureFilename):
     logging.debug('New subject detected. Filename {0}'.format(pictureFilename))
+
+    cv2.waitKey(100)
     image = cv2.imread(pictureFilename)
     name, _ = decodeSubjectPictureName(pictureFilename)
 
