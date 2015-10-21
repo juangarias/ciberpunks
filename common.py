@@ -15,11 +15,19 @@ def encodeSubjectPictureName(name, email):
 
 
 def decodeSubjectPictureName(filename):
+  if filename is None:
+    return '', ''
+
   data = filename.split('-')
   name = data[0].replace('_', ' ')
-  email = data[1]
-  return name, email
 
+  if len(data) > 1:
+    email = data[1]
+  else:
+    email = ''
+
+  return name, email
+  
 
 def loadCascadeClassifier(filename):
   cascade = cv2.CascadeClassifier(filename)
