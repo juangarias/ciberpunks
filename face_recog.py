@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# coding=utf-8
 
 import argparse, logging, os, sys, Image
 import numpy as np

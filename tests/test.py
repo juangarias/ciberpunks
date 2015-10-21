@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# coding=utf-8
+
 import sys, time, Image, logging, argparse
 sys.path.append("../")
 import numpy

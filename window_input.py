@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# coding=utf-8
 
 import argparse, logging, os, sys
 import cv2
@@ -19,17 +20,20 @@ def configureArguments():
   return parser.parse_args()
 
 
-
-
-
 def readInput(stdscr, y, x):
   stdscr.move(y, x)
   value = ''
   c = stdscr.getch()
 
+  invalidChars = list('\\ºª!|·$%/()=¡^`[]{}*+:;<>,')
+
   while c != 10:
     if c < 256:
-      value += chr(c)
+      if chr(c) in invalidChars:
+        stdscr.delch(y, x)
+      else:
+        value += chr(c)
+        x += 1
     c = stdscr.getch()
 
   return value
@@ -107,13 +111,26 @@ def drawThanksWindow(stdscr):
   stdscr.addstr(yPos, xPos, "||       MUCHAS GRACIAS       ||")
   yPos += 1
   stdscr.addstr(yPos, xPos, "================================")
-  yPos += 1
+  yPos += 3
+  stdscr.addstr(yPos, xPos, "...Por favor, presione [Enter]...")
 
   noecho()
 
   c = 0 
   while c != 10:
     c = stdscr.getch()
+
+
+def initCurses():
+  stdscr = initscr()
+  noecho()
+  cbreak()
+  start_color()
+  stdscr.keypad(1)
+  stdscr.border(0)
+  stdscr.box()
+
+  return stdscr
 
 
 def destroyCurses():
@@ -125,38 +142,31 @@ def destroyCurses():
 
 def main():
   try:
+    returnCode = 9
     args = configureArguments()
     configureLogging(args.log)
 
-    stdscr = initscr()
-    noecho()
-    cbreak()
-    start_color()
+    stdscr = initCurses()
 
-    stdscr.keypad(1)
-    stdscr.border(0)
-    stdscr.box()
+    name = ''
+    email = ''
 
-    while True:
-      name = ''
-      email = ''
+    while not name or not email:
+      (name, email) = drawInputWindow(stdscr)
 
-      while not name or not email:
-        (name, email) = drawInputWindow(stdscr)
+    img = getUserPicture(int(args.outputWidth))
 
-      img = getUserPicture(int(args.outputWidth))
+    formatParams = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
+    cv2.imwrite(args.outFolder + '/' + encodeSubjectPictureName(name, email) + '.jpg', img, formatParams)
 
-      formatParams = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
-      cv2.imwrite(args.outFolder + '/' + encodeSubjectPictureName(name, email) + '.jpg', img, formatParams)
+    drawThanksWindow(stdscr)
 
-      drawThanksWindow(stdscr)
-
-  except:
-    logging.error("Unexpected error")
-    pass
-
-  cv2.destroyAllWindows()
-  destroyCurses()
+  except KeyboardInterrupt:
+    returnCode = 0
+  finally:
+    cv2.destroyAllWindows()
+    destroyCurses()
+    sys.exit(returnCode)
 
     
   
