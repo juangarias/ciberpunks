@@ -9,7 +9,16 @@ from common import (detectElements, configureLogging, detectFaces, calculateCent
   loadCascadeClassifier, calculateScaledSize, drawRectangle, drawLabel)
 
 
+def configureArguments():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--log', help="Log level for logging.", default="WARNING")
+  return parser.parse_args()
+
+
 def main():
+  args = configureArguments()
+  configureLogging(args.log)
+
   windowTitle = "Test draw app"
   cv2.namedWindow(windowTitle)
 
@@ -19,48 +28,35 @@ def main():
   rightEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_righteye_2splits.xml")
   mouthCascade = loadCascadeClassifier(haarFolder + '/haarcascade_mcs_mouth.xml')
 
-  color = (120,120,255)
+  color = (120,120,130)
   thickness = 2
 
-  for i in xrange(1, 10):
-    image = cv2.imread('/home/juan/ciberpunks/faces/at&t_database/s10/{0}.pgm'.format(i))
-    image = cv2.resize(image, calculateScaledSize(400, image=image))
+  width = 600
 
-    if image is None:
-      print 'ERROR: no se pudo leer la imagen.'
-      return
+  image = cv2.imread('/home/juan/ciberpunks/faces/news/jota-juangarias@gmail.com.jpg')
+  image = cv2.resize(image, calculateScaledSize(width, image=image))
 
-    minFaceSize = (10, 10)
-    minEyeSize = (12, 18)
+  if image is None:
+    print 'ERROR: no se pudo leer la imagen.'
+    return
 
-    faces = detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize, minEyeSize, None)
+  minFaceSize = (10, 10)
+  minEyeSize = (5, 5)
 
-    for (x, y, w, h, leftEye, rightEye, mouths) in faces:
-      center = calculateCenter((x,y,w,h))
-      box = None
-      cv2.ellipse(image, (center, (w, h + 100), 0), color, thickness)
+  faces = detectFaces(image, faceCascade, leftEyeCascade, rightEyeCascade, minFaceSize, minEyeSize)
 
-      #drawRectangle(image, rightEye, color, thickness)
-      #drawRectangle(image, leftEye, color, thickness)
-     
-      reCenter = calculateCenter(rightEye)
-      cv2.circle(image, reCenter, 5, color, 0)
-      cv2.ellipse(image, (reCenter, (rightEye[2], rightEye[3] - 30), 0), color, thickness)
+  for (x, y, w, h, leftEyes, rightEyes) in faces:
+    center = calculateCenter((x,y,w,h))
 
-      leCenter = calculateCenter(leftEye)
-      cv2.circle(image, leCenter, 5, color, 0)
-      cv2.ellipse(image, (leCenter, (leftEye[2], leftEye[3] - 30), 0), color, thickness)
+    cv2.line(image, (x,0), (x, width), color, 2)
+    cv2.line(image, (x+w,0), (x+w, width), color, 2)
+    cv2.line(image, (0,y), (width, y), color, 2)
+    cv2.line(image, (0,y+h), (width, y+h), color, 2)
 
-      cv2.line(image, leCenter, reCenter, color, 2)
+    drawLabel("Juan Gabriel", image, (x, y+20))
 
-      if not mouths is None:
-        for m in mouths:
-          drawRectangle(image, m, (0, 255, 0), thickness)
-
-    drawLabel("Scanning...", image, (100, 50), cv2.FONT_HERSHEY_SIMPLEX)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     cv2.imshow(windowTitle, image)
-    cv2.waitKey(1000)
+    cv2.waitKey(6000)
     
   cv2.destroyWindow(windowTitle)
 

@@ -37,6 +37,14 @@ def loadCascadeClassifier(filename):
   return cascade
 
 
+def overlayImage(bg, fg, x, y):
+  # Old version, doesnt take care of alpha channel.- jarias
+  #back[y:y+fg.shape[0], x:x+fg.shape[1]] = fg
+
+  for c in range(0,3):
+    bg[y:y+fg.shape[0], x:x+fg.shape[1], c] = fg[:,:,c] * (fg[:,:,3]/255.0) +  bg[y:y+fg.shape[0], x:x+fg.shape[1], c] * (1.0 - fg[:,:,3]/255.0)
+
+
 def drawRectangle(image, square, color, thickness):
   (x,y,w,h) = square
   cv2.rectangle(image, (x,y), (x+w,y+h), color, thickness)
