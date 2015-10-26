@@ -1,158 +1,164 @@
 #!/usr/bin/python
 # coding=utf-8
 
-import argparse, logging, os, sys, threading
+import argparse
+import logging
+import time
+import os
+import Queue
 from random import randint
-import pyinotify
+from watchdog.observers import Observer
 import cv2
-from common import (configureLogging, loadCascadeClassifier, calculateScaledSize, readImages, detectFaces, 
-  decodeSubjectPictureName, drawLabel)
+from common import *
+
+if os.name == 'posix':
+    from watchdogEventHandler import FileCreatedEventHandler
+else:
+    from pyinotifyEventHandler import FileCreatedEventHandler
+
 
 def configureArguments():
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--facesFolder', help="Foder containing all faces files.", 
-    default='/home/juan/ciberpunks/faces/at&t_database')
-  parser.add_argument('--newSubjectsFolder', help="Foder containing new faces files.", 
-    default='/home/juan/ciberpunks/faces/news')
-  parser.add_argument('--haarFolder', help="Folder containing HAAR cascades.", 
-    default="/home/juan/ciberpunks/opencv-2.4.11/data/haarcascades")
-  parser.add_argument('--outputWidth', help="Output with for images to display in windows.", default="350")
-  parser.add_argument('--log', help="Log level for logging.", default="WARNING")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--facesFolder', help="Foder containing all faces files.",
+                        default='/Users/juan/faces/at&t_database')
+    parser.add_argument('--newSubjectsFolder', help="Foder containing new faces files.",
+                        default='/Users/juan/faces/news')
+    parser.add_argument('--haarFolder', help="Folder containing HAAR cascades.",
+                        default="/usr/local/Cellar/opencv/2.4.12/share/OpenCV/haarcascades")
+    parser.add_argument('--outputWidth', help="Output with for images to display in windows.", default="350")
+    parser.add_argument('--log', help="Log level for logging.", default="WARNING")
 
-  return parser.parse_args()
+    return parser.parse_args()
 
 
-class StoppableThread(threading.Thread):
-    """Thread class with a stop() method. The thread itself has to check
-    regularly for the stopped() condition."""
+def showCollectedFaces(faces, outputWidth, listFacesWindow):
 
-    def __init__(self, listFacesWindow, faces, outputWidth):
-        super(StoppableThread, self).__init__()
-        self._stop = threading.Event()
-        self.listFacesWindow = listFacesWindow
+    lenFaces = len(faces)
+
+    logging.debug('Showing list of {0} faces randomly...'.format(lenFaces))
+    for i in xrange(30):
+        pos = randint(0, lenFaces - 1)
+        img = faces[pos]
+        outputSize = calculateScaledSize(outputWidth, image=img)
+        cv2.imshow(listFacesWindow, cv2.resize(img, outputSize))
+        cv2.waitKey(75)
+
+
+class NewSubjectDetectedEventHandler():
+
+    def __init__(self, faces, haarFolder, outputWidth):
+        self.mainWindow = "Sujeto detectado"
         self.faces = faces
+        self.faceCascade = loadCascadeClassifier(haarFolder + "/haarcascade_frontalface_alt2.xml")
+        self.leftEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_lefteye_2splits.xml")
+        self.rightEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_righteye_2splits.xml")
         self.outputWidth = outputWidth
 
-    def run(self):
-      #for img in self.faces:
-      while not self.stopped():
-        pos = randint(0, len(self.faces) - 1)
-        img = self.faces[pos]
-        outputSize = calculateScaledSize(self.outputWidth, image=img)
-        cv2.imshow(self.listFacesWindow, cv2.resize(img, outputSize))
-        cv2.waitKey(50)
+        logging.debug('Creating main window...')
+        cv2.namedWindow(self.mainWindow)
 
-    def stop(self):
-        self._stop.set()
+    def newSubject(self, picturePath):
+        logging.debug('New subject detected. Filename {0}'.format(picturePath))
+        image = cv2.imread(picturePath)
+        (_, filename) = os.path.split(picturePath)
+        name, _ = decodeSubjectPictureName(filename)
+        logging.debug('Image read OK. Name is: {0}'.format(name))
 
-    def stopped(self):
-        return self._stop.isSet()
+        # Wait for filesystem to finish write the data.- jarias
+        cv2.waitKey(100)
 
+        if image is not None:
+            detectedFaces = detectFaces(image, self.faceCascade, self.leftEyeCascade, self.rightEyeCascade, (50, 50))
 
-class NewFaceDetectedEventHandler(pyinotify.ProcessEvent):
+            outputSize = calculateScaledSize(self.outputWidth, image=image)
+            detectedFaces = self.scaleFaceCoords(detectedFaces, image)
+            outputImage = cv2.resize(image, outputSize)
 
-  def __init__(self, mainWindow, listFacesWindow, faces, haarFolder, outputWidth):
-    self.mainWindow = mainWindow
-    self.listFacesWindow = listFacesWindow
-    self.faces = faces
-    self.faceCascade = loadCascadeClassifier(haarFolder + "/haarcascade_frontalface_alt2.xml")
-    self.leftEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_lefteye_2splits.xml")
-    self.rightEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_righteye_2splits.xml")
-    self.outputWidth = outputWidth
-    self.thread = None
+            logging.debug('Decorating face and showing it...')
+            self.drawFaceDecorations(outputImage, detectedFaces, name)
 
+            cv2.imshow(self.mainWindow, outputImage)
+            cv2.waitKey(5)
 
-  def drawFaceDecorations(self, image, detectedFaces, name):
-    color = (120, 120, 120)
-    thickness = 2
+    def scaleFaceCoords(self, facesCoords, image):
+        ret = []
 
-    for (x, y, w, h, leftEye, rightEye, _) in detectedFaces:
-      cv2.rectangle(image, (x,y), (x+w,y+h), color, thickness)
+        for (x, y, w, h, leftEyes, rightEyes) in facesCoords:
+            (sx, sy, sw, sh) = scaleCoords((x, y, w, h), image, self.outputWidth)
+            scaledLeftEyes = self.scaleEyes(leftEyes, image)
+            scaledRightEyes = self.scaleEyes(rightEyes, image)
 
-      (eyeX, eyeY, eyeW, eyeH) = leftEye
-      cv2.rectangle(image, (x+eyeX, y+eyeY), (x+eyeX+eyeW,y+eyeY+eyeH), color, thickness)
+            ret.append((sx, sy, sw, sh, scaledLeftEyes, scaledRightEyes))
 
-      (eyeX, eyeY, eyeW, eyeH) = rightEye
-      cv2.rectangle(image, (x+eyeX, y+eyeY), (x+eyeX+eyeW,y+eyeY+eyeH), color, thickness)
+        return ret
 
-      drawLabel(image, name, (x,y))
+    def scaleEyes(self, eyes, image):
+        ret = []
 
+        for i in eyes:
+            ret.append(scaleCoords(i, image, self.outputWidth))
 
-  def newSubject(self, pictureFilename):
-    logging.debug('New subject detected. Filename {0}'.format(pictureFilename))
+        return ret
 
-    cv2.waitKey(100)
-    image = cv2.imread(pictureFilename)
-    name, _ = decodeSubjectPictureName(pictureFilename)
+    def drawFaceDecorations(self, image, detectedFaces, name):
+        color = (120, 120, 120)
+        thickness = 2
 
-    if not image is None:
-      outputSize = calculateScaledSize(self.outputWidth, image=image)
+        for (x, y, w, h, leftEyes, rightEyes) in detectedFaces:
+            face = (x, y, w, h)
+            drawRectangle(image, face, color, thickness)
 
-      detectedFaces = detectFaces(image, self.faceCascade, self.leftEyeCascade, self.rightEyeCascade, (50, 50))
-      image = cv2.resize(image, outputSize)
-      
-      self.drawFaceDecorations(image, detectedFaces, name)
+            self.drawEyeDecorations(image, leftEyes)
+            self.drawEyeDecorations(image, rightEyes)
 
-      cv2.imshow(self.mainWindow, image)
+            drawLabel(name, image, (x, y))
 
-      self.thread = StoppableThread(self.listFacesWindow, self.faces, self.outputWidth)
-      self.thread.start()
+    def drawEyeDecorations(self, image, eyes):
+        color = (120, 120, 120)
+        thickness = 2
 
-
-  def process_IN_CREATE(self, event):
-    logging.debug("File {0}".format(event.pathname))
-    self.stopThread()
-    self.newSubject(event.pathname)
-
-  def process_IN_MOVED_TO(self, event):
-    logging.debug("File {0}".format(event.pathname))
-    self.stopThread()
-    self.newSubject(event.pathname)
-
-  def stopThread(self):
-    if not self.thread is None:
-      self.thread.stop()
-      self.thread.join()
+        for eye in eyes:
+            drawRectangle(image, eye, color, thickness)
 
 
 def main():
-  args = configureArguments()
-  configureLogging(args.log)
-  
-  logging.info('Starting face ID UI...')
+    args = configureArguments()
+    configureLogging(args.log)
+    logging.info('Starting face ID UI...')
 
-  logging.debug('Loading faces from disk...')
-  folders = [args.facesFolder]
-  [faces, _, _] = readImages(folders)
-  logging.debug('Faces loaded.')
+    logging.debug('Loading faces from disk...')
+    folders = [args.facesFolder]
+    [faces, _, _] = readImages(folders)
+    logging.debug('Faces loaded.')
 
-  outputWidth = int(args.outputWidth)
+    outputWidth = int(args.outputWidth)
 
-  try:
-    mainWindow = "Sujeto detectado"
-    cv2.namedWindow(mainWindow)
+    subjectsQueue = Queue.Queue()
+    newSubjectHandler = NewSubjectDetectedEventHandler(faces, args.haarFolder, outputWidth)
 
-    listFacesWindow = "Buscando en la base de datos..."
-    cv2.namedWindow(listFacesWindow)
+    try:
+        handler = FileCreatedEventHandler(faces, args.haarFolder, outputWidth, subjectsQueue)
+        observer = Observer()
+        observer.schedule(handler, args.newSubjectsFolder)
+        observer.start()
 
-    logging.debug('Creating custom event handler...')
-    handler = NewFaceDetectedEventHandler(mainWindow, listFacesWindow, faces, args.haarFolder, outputWidth)
+        while True:
+            if not subjectsQueue.empty():
+                newSubjectHandler.newSubject(subjectsQueue.get())
 
-    wm = pyinotify.WatchManager() 
-    eventsFlag = pyinotify.IN_MOVED_TO | pyinotify.IN_CREATE
+            showCollectedFaces(faces, outputWidth, 'Buscando objetivo...')
 
-    notifier = pyinotify.Notifier(wm, handler)
-    wdd = wm.add_watch(args.newSubjectsFolder, eventsFlag)
+            time.sleep(1)
 
-    logging.debug('Starting notifier infinite loop...')
-    notifier.loop()
-  except KeyboardInterrupt:
-    pass
+    except KeyboardInterrupt:
+        observer.stop()
 
-  logging.debug('Stopping and destroy all windows.')
-  handler.stopThread()
-  cv2.destroyAllWindows()
+    logging.debug('Stopping and destroy all windows...')
+    observer.join()
+    cv2.destroyAllWindows()
+    cv2.waitKey(10)
+    logging.info('Exit face ID UI gracefully.')
 
 
 if __name__ == '__main__':
-  main()
+    main()
