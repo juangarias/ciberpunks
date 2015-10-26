@@ -1,4 +1,5 @@
-import sys, math, Image, os
+import sys, math, os
+from PIL import Image
 import logging, numpy as np
 import cv2
 

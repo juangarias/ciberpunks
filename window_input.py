@@ -7,8 +7,12 @@ from curses import *
 from common import configureLogging, encodeSubjectPictureName, calculateScaledSize, drawLabel
 
 ESCAPE_KEY = 27
-ENTER_KEY = 10
 BACKSPACE_KEY = 263
+
+if os.name == 'posix':
+  ENTER_KEY = 13
+else:
+  ENTER_KEY = 10
 
 
 def configureArguments():
