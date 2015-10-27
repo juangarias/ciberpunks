@@ -8,10 +8,12 @@ Instalar pip (para poder instalar fácilmente todas las otras dependencias)
   * Instalar los binarios, para poder usar la librería
   * Descargar los archivos HAAR (xml para detección de objetos) que vienen con los fuentes
 * numpy (Debería venir junto con cv2)
-* pyinotify (https://github.com/seb-m/pyinotify)
+* pyinotify (https://github.com/seb-m/pyinotify) para Linux
+* watchdog para Mac OS X
 * urllib2
 * pyttsx
 * BeautifulSoup
+* paramiko
 
 ###Uso
 

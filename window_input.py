@@ -7,6 +7,7 @@ import os
 import platform
 import sys
 import cv2
+import paramiko
 from curses import *
 from common import configureLogging, encodeSubjectPictureName, calculateScaledSize, drawLabel
 
@@ -21,11 +22,19 @@ else:
 
 def configureArguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--outFolder', help="Folder for writing collected faces.",
-                        default="/home/juan/ciberpunks/faces/news")
-    parser.add_argument('--outputWidth', help="Output with for images to display in windows.",
+    parser.add_argument('--sshHost', help='Remote host for writing collected faces.',
+                        default='192.168.1.104')
+    parser.add_argument('--sshUser', help='Remote user for writing collected faces in remote host.',
+                        default='juan')
+    parser.add_argument('--sshPassword', help='Remote password for writing collected faces in remote host.',
+                        default='juan')
+    parser.add_argument('--tempLocalFolder', help='Temporary local folder for writing collected faces.',
+                        default='/home/juan/ciberpunks/faces/news')
+    parser.add_argument('--remoteFolder', help='Remote folder for writing collected faces.',
+                        default='/Users/juan/faces/news')
+    parser.add_argument('--outputWidth', help='Output with for images to display in windows.',
                         default="600")
-    parser.add_argument('--log', help="Log level for logging.", default="WARNING")
+    parser.add_argument('--log', help='Log level for logging.', default='WARNING')
     return parser.parse_args()
 
 
@@ -106,6 +115,8 @@ def getUserPicture(outputWidth):
     cv2.waitKey(2)
     cv2.waitKey(3)
 
+    logging.debug('Picture taken.')
+
     return image
 
 
@@ -130,6 +141,27 @@ def drawThanksWindow(stdscr):
         c = stdscr.getch()
 
 
+def savePicture(sshClient, image, name, email, tempFolder, remoteFolder):
+    formatParams = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
+    filename = encodeSubjectPictureName(name, email) + '.jpg'
+
+    localpath = tempFolder + '/' + filename
+    logging.debug('Trying to save local file to {0}'.format(localpath))
+    ret = cv2.imwrite(localpath, image, formatParams)
+    logging.debug('Local file written in {0} with result {1}.'.format(localpath, ret))
+
+    logging.debug('Trying to open SFTP client...')
+    sftpClient = sshClient.open_sftp()
+    logging.debug('Connect to SSH and SFTP server OK.')
+
+    remotepath = remoteFolder + '/' + filename
+    logging.debug('Trying to put remote file to {0}'.format(remotepath))
+    ret = sftpClient.put(localpath, remotepath)
+    logging.debug('File transferred to server in {0} with result {1}.'.format(remotepath, ret))
+
+    tryCloseConnection(sftpClient)
+
+
 def initCurses():
     stdscr = initscr()
     noecho()
@@ -149,11 +181,31 @@ def destroyCurses():
     os.system('stty sane')
 
 
-def main():
+def openSSH(sshHost, sshUser, sshPassword):
+    sshClient = paramiko.SSHClient()
+    sshClient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    logging.debug('Trying to connect to SSH server...')
+    sshClient.connect(sshHost, username=sshUser, password=sshPassword)
+    logging.debug('Connect to SSH server OK.')
+
+    return sshClient
+
+
+def tryCloseConnection(client):
     try:
-        returnCode = 9
-        args = configureArguments()
-        configureLogging(args.log)
+        client.close()
+    except:
+        pass
+
+
+def main():
+    returnCode = 9
+    args = configureArguments()
+    configureLogging(args.log, 'window_input.log')
+
+    try:
+        sshClient = openSSH(args.sshHost, args.sshUser, args.sshPassword)
 
         stdscr = initCurses()
 
@@ -164,15 +216,14 @@ def main():
             (name, email) = drawInputWindow(stdscr)
 
         img = getUserPicture(int(args.outputWidth))
-
-        formatParams = [int(cv2.IMWRITE_JPEG_QUALITY), 100]
-        cv2.imwrite(args.outFolder + '/' + encodeSubjectPictureName(name, email) + '.jpg', img, formatParams)
+        savePicture(sshClient, img, name, email, args.tempLocalFolder, args.remoteFolder)
 
         drawThanksWindow(stdscr)
 
     except KeyboardInterrupt:
         returnCode = 0
     finally:
+        tryCloseConnection(sshClient)
         cv2.destroyAllWindows()
         destroyCurses()
         sys.exit(returnCode)

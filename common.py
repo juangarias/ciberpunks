@@ -7,11 +7,17 @@ import numpy as np
 import cv2
 
 
-def configureLogging(loglevel):
+def configureLogging(loglevel, logFile=None):
     numeric_level = getattr(logging, loglevel.upper(), None)
+
     if not isinstance(numeric_level, int):
         raise ValueError('Invalid log level: %s' % loglevel)
-    logging.basicConfig(level=numeric_level, format='%(levelname)s:%(funcName)s:%(message)s')
+
+    if logFile is not None:
+        logging.basicConfig(level=numeric_level, filename=logFile,
+                            format='%(levelname)s:%(funcName)s:%(message)s')
+    else:
+        logging.basicConfig(level=numeric_level, format='%(levelname)s:%(funcName)s:%(message)s')
 
 
 def encodeSubjectPictureName(name, email):
