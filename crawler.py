@@ -10,8 +10,10 @@ import urllib2
 import speaker
 import json
 import webbrowser
+import cv2
+import numpy as np
 from bs4 import BeautifulSoup
-from common import configureLogging, decodeSubjectPictureName
+from common import configureLogging, decodeSubjectPictureName, validImage
 
 if os.name == 'posix':
     from watchdog.observers import Observer
@@ -34,7 +36,7 @@ class NewSubjectDetectedEventHandler():
         (_, filename) = os.path.split(picturePath)
         name, email = decodeSubjectPictureName(filename)
         searchBuscarCUIT(name)
-        # searchFullContact(email)
+        searchFullContact(email)
         # searchPipl(email)
 
     def process_IN_CREATE(self, event):
@@ -102,6 +104,10 @@ def searchFullContact(email):
       "photos" : [ {"type" : "twitter", "typeId" : "twitter", "typeName" : "Twitter",
         "url" : "https://d2ojpxxtu63wzl.cloudfront.net/static/0e3bb7f79f1bb1c9653dd746a6ca0f37_ca0c4be442587a4a91067992a267dd077cb58ad1ed00f1ceaefb7e61eeae0f35",
         "isPrimary" : true
+      },
+                  {"type" : "twitter", "typeId" : "twitter", "typeName" : "Twitter",
+        "url" : "http://www.linuxtopia.org/online_books/programming_books/art_of_unix_programming/graphics/kiss.png",
+        "isPrimary" : true
       } ],
       "contactInfo" : {"fullName" : "Nicolás Buttarelli"  },
       "socialProfiles" : [ {
@@ -124,7 +130,9 @@ def searchFullContact(email):
       }
     }""")
 
-    """"socialProfiles":
+
+    """" JSON schema of the response
+    socialProfiles":
     [
       {
         "typeId": {"type":"string"},
@@ -139,11 +147,17 @@ def searchFullContact(email):
       }
     ],"""
 
-    for photo in response['photos']:
+    for photo in getList(response, 'photos'):
         if 'url' in photo:
-            webbrowser.open_new(photo.get('url'))
+            req = urllib2.urlopen(photo.get('url'))
+            arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
+            image = cv2.imdecode(arr, -1)  # 'load it as it is'
 
-    for profile in response['socialProfiles']:
+            if validImage(image):
+                cv2.imshow('lalala', image)
+                cv2.waitKey(200)
+
+    for profile in getList(response, 'socialProfiles'):
         print(profile.get('type'))
         print(profile.get('username'))
 
@@ -160,6 +174,13 @@ def searchFullContact(email):
             print(profile.get('bio'))
 
 
+def getList(response, key):
+    if response.get(key):
+        return response.get(key)
+    else:
+        return []
+
+
 def searchPipl(email):
     url = "https://pipl.com/search/?q={0}&l=argentina&sloc=&in=5".format(email)
     webbrowser.open(url)
@@ -172,6 +193,8 @@ def main():
 
     subjectsQueue = Queue.Queue()
     newSubjectHandler = NewSubjectDetectedEventHandler()
+
+    cv2.namedWindow('lalala')
 
     try:
         logging.debug('Creating custom event handler...')
@@ -189,6 +212,7 @@ def main():
 
     except KeyboardInterrupt:
         observer.stop()
+        cv2.destroyAllWindows()
 
     observer.join()
     logging.info('END web crawler gracefully.')

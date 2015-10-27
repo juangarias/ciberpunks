@@ -47,6 +47,15 @@ def loadCascadeClassifier(filename):
     return cascade
 
 
+def validImage(image):
+    if image is None or len(image) == 0:
+        return False
+
+    (w, h) = image.shape[:2]
+
+    return w > 0 and h > 0
+
+
 def overlayImage(bg, fg, x, y):
     # Old version, doesnt take care of alpha channel.- jarias
     # back[y:y+fg.shape[0], x:x+fg.shape[1]] = fg
