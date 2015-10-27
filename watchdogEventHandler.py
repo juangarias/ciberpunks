@@ -4,10 +4,7 @@ from watchdog.events import FileSystemEventHandler
 
 class FileCreatedEventHandler(FileSystemEventHandler):
 
-    def __init__(self, faces, haarFolder, outputWidth, subjectsQueue):
-        self.faces = faces
-        self.haarFolder = haarFolder
-        self.outputWidth = outputWidth
+    def __init__(self, subjectsQueue):
         self.subjectsQueue = subjectsQueue
 
     def on_created(self, event):

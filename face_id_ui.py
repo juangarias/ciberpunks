@@ -7,11 +7,11 @@ import time
 import os
 import Queue
 from random import randint
-from watchdog.observers import Observer
 import cv2
 from common import *
 
 if os.name == 'posix':
+    from watchdog.observers import Observer
     from watchdogEventHandler import FileCreatedEventHandler
 else:
     from pyinotifyEventHandler import FileCreatedEventHandler
@@ -137,7 +137,7 @@ def main():
     newSubjectHandler = NewSubjectDetectedEventHandler(faces, args.haarFolder, outputWidth)
 
     try:
-        handler = FileCreatedEventHandler(faces, args.haarFolder, outputWidth, subjectsQueue)
+        handler = FileCreatedEventHandler(subjectsQueue)
         observer = Observer()
         observer.schedule(handler, args.newSubjectsFolder)
         observer.start()
