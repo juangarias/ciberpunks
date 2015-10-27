@@ -60,7 +60,7 @@ def searchBuscarCUIT(name):
     soup = BeautifulSoup(page, 'html.parser')
     # logging.debug('Search return OK {0}.'.format(soup.prettify()))
 
-    engine = speaker.OSXSpeaker()
+    engine = speaker.OSXSpeaker('Paulina')
 
     results = soup.findAll("div", {"class": "results"})
 

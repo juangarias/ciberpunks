@@ -8,7 +8,11 @@ class OSXSpeaker:
         self.voice = voice
 
     def say(self, phrase):
-        os.system('say ' + self.voice + ' ' + phrase)
+        voiceParam = ''
+        if self.voice:
+            voiceParam = ' -v {0} '.format(self.voice)
+
+        os.system('say ' + voiceParam + phrase)
 
     def runAndWait(self):
         pass
