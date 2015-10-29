@@ -3,122 +3,131 @@
 
 import argparse
 import logging
-import time
-import os
 import Queue
+import Image
+import ImageTk
 from random import randint
 import cv2
+from Tkinter import Tk, Frame, Label, BOTH, YES, LEFT, RIGHT
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 from common import *
-
-if os.name == 'posix':
-    from watchdog.observers import Observer
-    from watchdogEventHandler import FileCreatedEventHandler
-else:
-    from pyinotifyEventHandler import FileCreatedEventHandler
+from subjectHandler import NewSubjectDetectedEventHandler
 
 
 def configureArguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--facesFolder', help="Foder containing all faces files.",
-                        default='/Users/juan/faces/at&t_database')
+                        default='/home/juan/ciberpunks/faces/at&t_database')
     parser.add_argument('--newSubjectsFolder', help="Foder containing new faces files.",
-                        default='/Users/juan/faces/news')
+                        default='/home/juan/ciberpunks/faces/news')
     parser.add_argument('--haarFolder', help="Folder containing HAAR cascades.",
-                        default="/usr/local/Cellar/opencv/2.4.12/share/OpenCV/haarcascades")
-    parser.add_argument('--outputWidth', help="Output with for images to display in windows.", default="350")
+                        default="/home/juan/ciberpunks/opencv-2.4.11/data/haarcascades")
+    parser.add_argument('--outputWidth', help="Output with for images to display in windows.",
+                        type=int, default="450")
     parser.add_argument('--log', help="Log level for logging.", default="WARNING")
 
     return parser.parse_args()
 
 
-def showCollectedFaces(faces, outputWidth, listFacesWindow):
+def convertImageCVToTk(image):
+    # Rearrang the color channel
+    if len(image.shape) == 3:
+        b, g, r = cv2.split(image)
+        image = cv2.merge((r, g, b))
+    else:
+        b, g, r, a = cv2.split(image)
+        image = cv2.merge((r, g, b, a))
 
-    lenFaces = len(faces)
-
-    logging.debug('Showing list of {0} faces randomly...'.format(lenFaces))
-    for i in xrange(30):
-        pos = randint(0, lenFaces - 1)
-        img = faces[pos]
-        outputSize = calculateScaledSize(outputWidth, image=img)
-        cv2.imshow(listFacesWindow, cv2.resize(img, outputSize))
-        cv2.waitKey(75)
+    # Convert the Image object into a TkPhoto object
+    im = Image.fromarray(image)
+    return ImageTk.PhotoImage(image=im)
 
 
-class NewSubjectDetectedEventHandler():
+class FileCreatedEventHandler(FileSystemEventHandler):
 
-    def __init__(self, faces, haarFolder, outputWidth):
-        self.mainWindow = "Sujeto detectado"
-        self.faces = faces
-        self.faceCascade = loadCascadeClassifier(haarFolder + "/haarcascade_frontalface_alt2.xml")
-        self.leftEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_lefteye_2splits.xml")
-        self.rightEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_righteye_2splits.xml")
-        self.outputWidth = outputWidth
+    def __init__(self, subjectsQueue):
+        self.subjectsQueue = subjectsQueue
 
-        logging.debug('Creating main window...')
-        cv2.namedWindow(self.mainWindow)
+    def on_created(self, event):
+        logging.debug(event)
+        self.subjectsQueue.put(event.src_path)
 
-    def newSubject(self, picturePath):
-        logging.debug('New subject detected. Filename {0}'.format(picturePath))
-        image = cv2.imread(picturePath)
-        (_, filename) = os.path.split(picturePath)
-        name, _ = decodeSubjectPictureName(filename)
-        logging.debug('Image read OK. Name is: {0}'.format(name))
 
-        # Wait for filesystem to finish write the data.- jarias
-        cv2.waitKey(100)
+class FaceIDApp():
 
-        if image is not None:
-            detectedFaces = detectFaces(image, self.faceCascade, self.leftEyeCascade, self.rightEyeCascade, (50, 50))
+    def __init__(self, rootWindow, args):
 
-            outputSize = calculateScaledSize(self.outputWidth, image=image)
-            detectedFaces = self.scaleFaceCoords(detectedFaces, image)
-            outputImage = cv2.resize(image, outputSize)
+        self.rootWindow = rootWindow
+        self.rootWindow.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-            logging.debug('Decorating face and showing it...')
-            self.drawFaceDecorations(outputImage, detectedFaces, name)
+        self.haarFolder = args.haarFolder
+        self.outputWidth = args.outputWidth
+        self.rootWindow.title('Face Identification App')
+        self.rootWindow.geometry('1000x700+440+0')
 
-            cv2.imshow(self.mainWindow, outputImage)
-            cv2.waitKey(5)
+        self.mainFrame = Frame(self.rootWindow)
+        self.mainFrame.configure(background="black")
+        self.mainFrame.pack(fill=BOTH, expand=YES)
 
-    def scaleFaceCoords(self, facesCoords, image):
-        ret = []
+        self.subjectLabel = Label(self.mainFrame)
+        self.subjectLabel.pack(side=LEFT)
+        self.listFacesLabel = Label(self.mainFrame)
+        self.listFacesLabel.pack(side=RIGHT)
 
-        for (x, y, w, h, leftEyes, rightEyes) in facesCoords:
-            (sx, sy, sw, sh) = scaleCoords((x, y, w, h), image, self.outputWidth)
-            scaledLeftEyes = self.scaleEyes(leftEyes, image)
-            scaledRightEyes = self.scaleEyes(rightEyes, image)
+        logging.debug('Loading faces from disk...')
+        folders = [args.facesFolder]
+        [self.faces, _, _] = readImages(folders)
+        logging.debug('Faces loaded.')
 
-            ret.append((sx, sy, sw, sh, scaledLeftEyes, scaledRightEyes))
+        logging.debug('Creating new subject handler...')
+        self.newSubjectHandler = NewSubjectDetectedEventHandler(self.haarFolder, self.outputWidth)
 
-        return ret
+        self.subjectsQueue = Queue.Queue()
+        handler = FileCreatedEventHandler(self.subjectsQueue)
 
-    def scaleEyes(self, eyes, image):
-        ret = []
+        logging.debug('Creating observer for watchdog...')
+        self.observer = Observer()
+        self.observer.schedule(handler, args.newSubjectsFolder)
+        self.observer.start()
 
-        for i in eyes:
-            ret.append(scaleCoords(i, image, self.outputWidth))
+        self.checkPendingWork()
 
-        return ret
+    def checkPendingWork(self):
+        """
+        Check every 500 ms if there is something new in the queue.
+        """
+        logging.debug('Checking for pending work in the queue...')
+        if not self.subjectsQueue.empty():
+            logging.info('Subjects queue is not empty!')
+            outputImage = self.newSubjectHandler.newSubject(self.subjectsQueue.get())
+            self.subjectImage = convertImageCVToTk(outputImage)
+            self.subjectLabel.configure(image=self.subjectImage)
+            self.subjectLabel.pack()
 
-    def drawFaceDecorations(self, image, detectedFaces, name):
-        color = (120, 120, 120)
-        thickness = 2
+            self.showCollectedFaces()
 
-        for (x, y, w, h, leftEyes, rightEyes) in detectedFaces:
-            face = (x, y, w, h)
-            drawRectangle(image, face, color, thickness)
+        self.rootWindow.after(500, self.checkPendingWork)
 
-            self.drawEyeDecorations(image, leftEyes)
-            self.drawEyeDecorations(image, rightEyes)
+    def showCollectedFaces(self):
+        pos = randint(0, len(self.faces) - 1)
+        img = self.faces[pos]
+        outputSize = calculateScaledSize(self.outputWidth, image=img)
+        outputImage = cv2.resize(img, outputSize)
 
-            drawLabel(name, image, (x, y))
+        self.randomSubjectImage = convertImageCVToTk(outputImage)
 
-    def drawEyeDecorations(self, image, eyes):
-        color = (120, 120, 120)
-        thickness = 2
+        self.listFacesLabel.configure(image=self.randomSubjectImage)
+        self.listFacesLabel.pack()
 
-        for eye in eyes:
-            drawRectangle(image, eye, color, thickness)
+        self.rootWindow.after(100, self.showCollectedFaces)
+
+    def on_closing(self):
+        logging.debug('Trying to exit FaceIDApp...')
+        self.observer.stop()
+        self.observer.join()
+        self.rootWindow.destroy()
+        logging.info('Exit FaceIDApp gracefully.')
 
 
 def main():
@@ -126,39 +135,14 @@ def main():
     configureLogging(args.log)
     logging.info('Starting face ID UI...')
 
-    logging.debug('Loading faces from disk...')
-    folders = [args.facesFolder]
-    [faces, _, _] = readImages(folders)
-    logging.debug('Faces loaded.')
+    logging.debug('Initializing Graphical UI...')
+    rootWindow = Tk()
+    FaceIDApp(rootWindow, args)
 
-    outputWidth = int(args.outputWidth)
+    logging.debug('Start the GUI')
+    rootWindow.mainloop()
 
-    subjectsQueue = Queue.Queue()
-    newSubjectHandler = NewSubjectDetectedEventHandler(faces, args.haarFolder, outputWidth)
-
-    try:
-        handler = FileCreatedEventHandler(subjectsQueue)
-        observer = Observer()
-        observer.schedule(handler, args.newSubjectsFolder)
-        observer.start()
-
-        while True:
-            if not subjectsQueue.empty():
-                newSubjectHandler.newSubject(subjectsQueue.get())
-
-            showCollectedFaces(faces, outputWidth, 'Buscando objetivo...')
-
-            time.sleep(1)
-
-    except KeyboardInterrupt:
-        observer.stop()
-
-    logging.debug('Stopping and destroy all windows...')
-    observer.join()
-    cv2.destroyAllWindows()
-    cv2.waitKey(10)
-    logging.info('Exit face ID UI gracefully.')
-
+# end main
 
 if __name__ == '__main__':
     main()

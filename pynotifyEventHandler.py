@@ -2,9 +2,9 @@ import logging
 import pyinotify
 
 
-def startPyInotify(newSubjectsFolder, haarFolder, outputWidth):
-    logging.debug('Creating custom event handler...')
-    handler = None  # NewFaceDetectedEventHandler(mainWindow, listFacesWindow, faces, haarFolder, outputWidth)
+def startDirectoryMonitor(newSubjectsFolder, newSubjectHandler):
+    logging.debug('Creating custom event handler for pyinotify...')
+    handler = FileCreatedEventHandler(newSubjectHandler)
 
     wm = pyinotify.WatchManager()
     eventsFlag = pyinotify.IN_MOVED_TO | pyinotify.IN_CREATE

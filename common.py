@@ -40,6 +40,7 @@ def decodeSubjectPictureName(filename):
 
 
 def loadCascadeClassifier(filename):
+    logging.debug('Loading cascade classifier from {0}'.format(filename))
     cascade = cv2.CascadeClassifier(filename)
     if cascade.empty():
         raise ValueError('Cascade classifier is empty!')
@@ -147,9 +148,8 @@ def readImages(paths, sz=None):
                 subject_path = os.path.join(dirname, subdirname)
                 for filename in os.listdir(subject_path):
                     try:
-                        im = Image.open(os.path.join(subject_path, filename))
-                        im = resizeImage(im.convert("L"), sz)
-                        images.append(np.asarray(im, dtype=np.uint8))
+                        im = cv2.imread(os.path.join(subject_path, filename))
+                        images.append(im)
                         labels.append(subjectId)
                         fileCount += 1
                         sys.stdout.write("Loaded file {0} of {1}      \r".format(fileCount, totalFilesCount))
