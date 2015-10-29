@@ -16,7 +16,8 @@ class NewSubjectDetectedEventHandler():
         logging.debug('New subject detected. Filename {0}'.format(picturePath))
         image = cv2.imread(picturePath)
         (_, filename) = os.path.split(picturePath)
-        name, _ = decodeSubjectPictureName(filename)
+        name, email = decodeSubjectPictureName(filename)
+        outputImage = None
         logging.debug('Image read OK. Name is: {0}'.format(name))
 
         # Wait for filesystem to finish write the data.- jarias
@@ -33,9 +34,8 @@ class NewSubjectDetectedEventHandler():
             self.drawFaceDecorations(outputImage, detectedFaces, name)
 
             logging.debug('Returning decorated face.')
-            return outputImage
-        else:
-            return None
+
+        return name, email, outputImage
 
     def scaleFaceCoords(self, facesCoords, image):
         ret = []
@@ -60,13 +60,13 @@ class NewSubjectDetectedEventHandler():
     def drawFaceDecorations(self, image, detectedFaces, name):
         color = (120, 120, 120)
         thickness = 1
-        cornerThickness = 3
-        offset = int(self.outputWidth * 0.2)
-        halfOffset = int(offset / 2)
+        cornerThickness = 4
 
         for (x, y, w, h, leftEyes, rightEyes) in detectedFaces:
-            face = (x, y, w, h)
-            drawRectangle(image, face, color, thickness)
+            offset = int(w * 0.2)
+            radius = int(offset / 3)
+            # face = (x, y, w, h)
+            # drawRectangle(image, face, color, thickness)
 
             self.drawCorner(image, x, y, offset, color, cornerThickness)
             self.drawCorner(image, x + w, y + h, -1 * offset, color, cornerThickness)
@@ -78,12 +78,10 @@ class NewSubjectDetectedEventHandler():
             self.drawEyeDecorations(image, rightEyes)
 
             center = calculateCenter((x, y, w, h))
-            cv2.circle(image, center, halfOffset - 5, color)
+            cv2.circle(image, center, radius - 5, color)
             (x1, y1) = center
-            cv2.line(image, (x1 - halfOffset, y1), (x1 + halfOffset, y1), color, thickness)
-            cv2.line(image, (x1, y1 - halfOffset), (x1, y1 + halfOffset), color, thickness)
-
-            drawLabel(name, image, (x, y))
+            cv2.line(image, (x1 - radius, y1), (x1 + radius, y1), color, thickness)
+            cv2.line(image, (x1, y1 - radius), (x1, y1 + radius), color, thickness)
 
     def drawCorner(self, image, x, y, offset, color, thickness):
         cv2.line(image, (x, y), (x + offset, y), color, thickness)
