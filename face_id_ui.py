@@ -3,19 +3,18 @@
 import argparse
 import logging
 import Queue
-import Image
-import ImageTk
-import urllib2
-import base64
+from PIL import Image
 from random import randint
 import cv2
 import tkFont
-from Tkinter import Tk, Frame, Label, BOTH, YES, LEFT, RIGHT, TOP, RIDGE
+from Tkinter import Tk, Frame, Label, BOTH, YES, LEFT, RIGHT, TOP, BOTTOM, RIDGE
+from ImageTk import PhotoImage
 from watchdog.observers import Observer
 from watchdogEventHandler import FileCreatedEventHandler
 from common import *
 from websearch import searchFullContact, getList
 from subjectHandler import NewSubjectDetectedEventHandler
+from web_data_iterator import WebPicturesIterator, SocialNetworkIterator
 
 
 def configureArguments():
@@ -40,7 +39,7 @@ def convertImageCVToTk(image):
 
     # Convert the Image object into a TkPhoto object
     im = Image.fromarray(image)
-    return ImageTk.PhotoImage(image=im)
+    return PhotoImage(image=im)
 
 
 class FaceIDApp():
@@ -56,7 +55,7 @@ class FaceIDApp():
 
         self.mainFrame = Frame(self.rootWindow)
         im = Image.open('resources/background00.jpg')
-        self.bgImage = ImageTk.PhotoImage(im)
+        self.bgImage = PhotoImage(im)
         bgImageLabel = Label(self.mainFrame, image=self.bgImage)
         bgImageLabel.place(x=0, y=0)
         self.mainFrame.pack(fill=BOTH, expand=YES)
@@ -87,8 +86,7 @@ class FaceIDApp():
         self.leftFrame.configure(background="black", padx=3, pady=3)
 
         rowCount = 0
-
-        self.subjectPictureLabel = Label(self.leftFrame)
+        self.subjectPictureLabel = Label(self.leftFrame, bd=0)
         self.subjectPictureLabel.grid(row=rowCount, column=0)
         rowCount += 1
 
@@ -98,11 +96,8 @@ class FaceIDApp():
         self.subjectNameLabel.grid(row=rowCount, column=0)
         rowCount += 1
 
-        self.buildSubjectDataFrame(self.leftFrame, rowCount)
-        rowCount += 1
-
-        self.webPictureLabel = Label(self.leftFrame, height=200, width=200)
-        self.webPictureLabel.grid(row=rowCount, column=0)
+        self.buildSubjectDataFrame(self.leftFrame)
+        self.subjectDataFrame.grid(row=rowCount, column=0)
         rowCount += 1
 
         self.leftFrame.pack(side=LEFT)
@@ -114,22 +109,26 @@ class FaceIDApp():
         self.listFacesLabel.config(borderwidth=0)
         self.listFacesLabel.pack(side=TOP)
 
+        self.webPictureLabel = Label(self.rightFrame, height=200, width=200, bd=0)
+        self.webPictureLabel.pack(side=BOTTOM)
+
         self.rightFrame.pack(side=RIGHT)
 
-    def buildSubjectDataFrame(self, container, rowCount):
+    def buildSubjectDataFrame(self, container):
         self.subjectDataFrame = Frame(container)
 
-        self.addSubjectField('Twitter account:', 'cimarronytabaco', 0)
-        self.addSubjectField('Nombre:', 'Jota', 1)
-        self.addSubjectField('Followers:', '45', 2)
-        self.addSubjectField('Following:', '50', 3)
-
-        self.subjectDataFrame.grid(row=rowCount, column=0)
+        self.snType = self.addSubjectField('Social network:', '', 0)
+        self.snUsername = self.addSubjectField('Username:', '', 1)
+        self.snFollowers = self.addSubjectField('Followers:', '', 2)
+        self.snFollowing = self.addSubjectField('Following:', '', 3)
+        self.snURL = self.addSubjectField('URL:', '', 4)
+        self.snBio = self.addSubjectField('Bio:', '', 5)
 
     def addSubjectField(self, name, value, row):
         Label(self.subjectDataFrame, text=name).grid(row=row, column=0)
-        self.nameLabel = Label(self.subjectDataFrame, text=value, relief=RIDGE, width=20)
-        self.nameLabel.grid(row=row, column=1)
+        label = Label(self.subjectDataFrame, text=value, relief=RIDGE, width=50)
+        label.grid(row=row, column=1)
+        return label
 
     def checkPendingWork(self):
         """
@@ -146,14 +145,15 @@ class FaceIDApp():
         self.rootWindow.after(500, self.checkPendingWork)
 
     def showDetectedSubject(self, name, image):
+        logging.debug('Showing detected subject {0}'.format(name))
+        if name is not None:
+            self.subjectNameLabel.configure(text=name.title())
+            self.subjectNameLabel.grid()
+
         if image is not None:
             self.subjectImage = convertImageCVToTk(image)
             self.subjectPictureLabel.configure(image=self.subjectImage)
-            self.subjectPictureLabel.pack()
-
-        if name is not None:
-            self.subjectNameLabel.configure(text=name.title())
-            self.subjectNameLabel.pack()
+            self.subjectPictureLabel.grid()
 
     def showCollectedFaces(self):
         pos = randint(0, len(self.faces) - 1)
@@ -170,31 +170,48 @@ class FaceIDApp():
     def launchSearch(self, name, email):
         result = searchFullContact(email)
 
-        self.webPicturesFound = getList(result, 'photos')
-        self.webPicturesIndex = 0
-        self.rotateWebPicture()
+        self.webPicturesIterator = WebPicturesIterator(getList(result, 'photos'))
+        self.socialNetworkIterator = SocialNetworkIterator(getList(result, 'socialProfiles'))
+        self.rotateWebData()
 
-        self.showWebPages(result)
+        # self.showWebPages(result)
 
-    def rotateWebPicture(self):
-        if self.webPicturesIndex < len(self.webPicturesFound):
-            photo = self.webPicturesFound[self.webPicturesIndex]
+    def rotateWebData(self):
+        size = 200, 200
+        rotate = False
 
-            if 'url' in photo:
-                req = urllib2.urlopen(photo.get('url'))
-                b64_data = base64.encodestring(req.read())
-                self.currentWebPicture = ImageTk.PhotoImage(data=b64_data)
-                req.close()
+        logging.debug('Trying to iterate web image...')
+        if self.webPicturesIterator.hastNext():
+            logging.debug('Next image!')
+            image = self.webPicturesIterator.next()
+            # TODO: keep ratio when resizing image.- jarias
+            image = image.resize(size)
+            self.currentWebPicture = PhotoImage(image)
+            self.webPictureLabel.configure(image=self.currentWebPicture)
+            self.webPictureLabel.pack()
+            rotate = True
+        else:
+            logging.debug('No images detected.')
 
-                self.webPictureLabel.configure(image=self.currentWebPicture)
-                self.webPictureLabel.pack()
+        logging.debug('Trying to iterate social network...')
+        if self.socialNetworkIterator.hastNext():
+            logging.debug('Next social network!')
+            profileType, username, followers, following, url, bio = self.socialNetworkIterator.next()
+            self.snType.configure(text=profileType)
+            self.snType.grid(row=0, column=1)
+            self.snUsername.configure(text=username)
+            self.snFollowers.configure(text=followers)
+            self.snFollowing.configure(text=following)
+            self.snURL.configure(text=url)
+            self.snBio.configure(text=bio)
+            rotate = True
+        else:
+            logging.debug('No social networks detected.')
 
-            self.webPicturesIndex += 1
-            self.rootWindow.after(2000, self.rotateWebPicture)
+        self.leftFrame.pack(side=LEFT)
 
-        elif self.webPicturesIndex > 0:
-            self.webPicturesIndex = 0
-            self.rootWindow.after(2000, self.rotateWebPicture)
+        if rotate:
+            self.rootWindow.after(2000, self.rotateWebData)
 
     def showWebPages(self, result):
         for profile in getList(result, 'socialProfiles'):
