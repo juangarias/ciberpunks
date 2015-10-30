@@ -7,7 +7,7 @@ from PIL import Image
 from random import randint
 import cv2
 import tkFont
-from Tkinter import Tk, Frame, Label, BOTH, YES, LEFT, RIGHT, TOP, BOTTOM, RIDGE
+from Tkinter import Tk, Frame, Label, BOTH, YES, LEFT, RIGHT, TOP, BOTTOM, RIDGE, S, N, W, E
 from ImageTk import PhotoImage
 from watchdog.observers import Observer
 from watchdogEventHandler import FileCreatedEventHandler
@@ -46,27 +46,23 @@ class FaceIDApp():
 
     def __init__(self, rootWindow, args):
         self.rootWindow = rootWindow
+        # screenWidth = self.rootWindow.winfo_screenwidth()
+        # screenHeight = self.rootWindow.winfo_screenheight()
+
+        self.rootWindow.title('Face Identification App')
+        self.rootWindow.geometry('900x800+440+0')
         self.rootWindow.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.haarFolder = args.haarFolder
         self.outputWidth = args.outputWidth
-        self.rootWindow.title('Face Identification App')
-        self.rootWindow.geometry('1000x700+440+0')
+        self.facesFolder = args.facesFolder
+        self.fontFamily = 'System'
 
-        self.mainFrame = Frame(self.rootWindow)
-        im = Image.open('resources/background00.jpg')
-        self.bgImage = PhotoImage(im)
-        bgImageLabel = Label(self.mainFrame, image=self.bgImage)
-        bgImageLabel.place(x=0, y=0)
-        self.mainFrame.pack(fill=BOTH, expand=YES)
-
+        self.mainFrame = self.buildMainFrame()
         self.buildLeftFrame()
         self.buildRightFrame()
 
-        logging.debug('Loading faces from disk...')
-        folders = [args.facesFolder]
-        [self.faces, _, _] = readImages(folders)
-        logging.debug('Faces loaded.')
+        self.loadFaces()
 
         logging.debug('Creating new subject handler...')
         self.newSubjectHandler = NewSubjectDetectedEventHandler(self.haarFolder, self.outputWidth)
@@ -81,6 +77,21 @@ class FaceIDApp():
 
         self.checkPendingWork()
 
+    def loadFaces(self):
+        logging.debug('Loading faces from disk...')
+        folders = [self.facesFolder]
+        [self.faces, _, _] = readImages(folders)
+        logging.debug('Faces loaded.')
+
+    def buildMainFrame(self):
+        f = Frame(self.rootWindow)
+        im = Image.open('resources/background00.jpg')
+        self.bgImage = PhotoImage(im)
+        bgImageLabel = Label(f, image=self.bgImage, bd=0)
+        bgImageLabel.place(x=0, y=0)
+        f.pack(fill=BOTH, expand=YES)
+        return f
+
     def buildLeftFrame(self):
         self.leftFrame = Frame(self.mainFrame)
         self.leftFrame.configure(background="black", padx=3, pady=3)
@@ -90,7 +101,7 @@ class FaceIDApp():
         self.subjectPictureLabel.grid(row=rowCount, column=0)
         rowCount += 1
 
-        labelFont = tkFont.Font(family='Arial', size=30)
+        labelFont = tkFont.Font(family=self.fontFamily, size=26)
         self.subjectNameLabel = Label(self.leftFrame)
         self.subjectNameLabel.configure(font=labelFont, bg='black', fg='white')
         self.subjectNameLabel.grid(row=rowCount, column=0)
@@ -117,17 +128,22 @@ class FaceIDApp():
     def buildSubjectDataFrame(self, container):
         self.subjectDataFrame = Frame(container)
 
-        self.snType = self.addSubjectField('Social network:', '', 0)
-        self.snUsername = self.addSubjectField('Username:', '', 1)
-        self.snFollowers = self.addSubjectField('Followers:', '', 2)
-        self.snFollowing = self.addSubjectField('Following:', '', 3)
-        self.snURL = self.addSubjectField('URL:', '', 4)
-        self.snBio = self.addSubjectField('Bio:', '', 5)
+        self.snType = self.addSubjectField(self.subjectDataFrame, 'Social network:', '', 0)
+        self.snUsername = self.addSubjectField(self.subjectDataFrame, 'Username:', '', 1)
+        self.snFollowers = self.addSubjectField(self.subjectDataFrame, 'Followers:', '', 2)
+        self.snFollowing = self.addSubjectField(self.subjectDataFrame, 'Following:', '', 3)
+        self.snURL = self.addSubjectField(self.subjectDataFrame, 'URL:', '', 4)
+        self.snBio = self.addSubjectField(self.subjectDataFrame, 'Bio:', '', 5)
 
-    def addSubjectField(self, name, value, row):
-        Label(self.subjectDataFrame, text=name).grid(row=row, column=0)
-        label = Label(self.subjectDataFrame, text=value, relief=RIDGE, width=50)
-        label.grid(row=row, column=1)
+    def addSubjectField(self, container, name, value, row):
+        labelFont = tkFont.Font(family=self.fontFamily, size=13)
+
+        descLabel = Label(container, text=name, bg='black', fg='green', font=labelFont)
+        descLabel.grid(row=row, column=0, sticky=W + E + N + S)
+
+        label = Label(container, text=value, relief=RIDGE, width=30, bg='black', fg='green', bd=0, font=labelFont)
+        label.grid(row=row, column=1, sticky=W + E + N + S)
+
         return label
 
     def checkPendingWork(self):

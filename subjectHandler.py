@@ -70,7 +70,6 @@ class NewSubjectDetectedEventHandler():
 
             self.drawCorner(image, x, y, offset, color, cornerThickness)
             self.drawCorner(image, x + w, y + h, -1 * offset, color, cornerThickness)
-
             self.drawReverseCorner(image, x, y + h, offset, color, cornerThickness)
             self.drawReverseCorner(image, x + w, y, -1 * offset, color, cornerThickness)
 

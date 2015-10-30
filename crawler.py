@@ -8,10 +8,10 @@ import Queue
 import urllib2
 import numpy as np
 import webbrowser
-import speaker
 import cv2
 from watchdog.observers import Observer
 from watchdogEventHandler import FileCreatedEventHandler
+from speaker import *
 from common import configureLogging, decodeSubjectPictureName, validImage
 from websearch import searchPipl, searchBuscarCUIT, searchFullContact, getList
 
@@ -29,9 +29,9 @@ class NewSubjectDetectedEventHandler():
     def newSubject(self, picturePath):
         (_, filename) = os.path.split(picturePath)
         name, email = decodeSubjectPictureName(filename)
-        doBuscarCUITSearch(name)
-        doFullContactSearch(email)
-        # doPiplSearch(email)
+        # doBuscarCUITSearch(name)
+        # doFullContactSearch(email)
+        doPiplSearch(email)
 
     def process_IN_CREATE(self, event):
         logging.debug("File {0}".format(event.pathname))
@@ -96,7 +96,22 @@ def doFullContactSearch(email):
 
 
 def doPiplSearch(email):
-    searchPipl(email)
+    thumbnails, groupedLinks, profile = searchPipl(email)
+
+    # for category, links in groupedLinks:
+        # print category
+
+        # for link in links:
+        #    webbrowser.open(link, new=0)
+        #    time.sleep(3)
+        #    print link
+
+    speaker = LinuxEspeak('spanish-latin-american')
+    speaker.say(profile.get('career', ''))
+    speaker.say(profile.get('education', ''))
+    speaker.say(profile.get('location', ''))
+    speaker.say(profile.get('usernames', ''))
+    speaker.say(profile.get('associated with', ''))
 
 
 def main():
@@ -106,8 +121,6 @@ def main():
 
     subjectsQueue = Queue.Queue()
     newSubjectHandler = NewSubjectDetectedEventHandler()
-
-    cv2.namedWindow('lalala')
 
     try:
         logging.debug('Creating custom event handler...')
@@ -125,7 +138,6 @@ def main():
 
     except KeyboardInterrupt:
         observer.stop()
-        cv2.destroyAllWindows()
 
     observer.join()
     logging.info('END web crawler gracefully.')
