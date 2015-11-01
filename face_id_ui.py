@@ -7,14 +7,23 @@ from PIL import Image
 from random import randint
 import cv2
 import tkFont
-from Tkinter import Tk, Frame, Label, BOTH, YES, LEFT, RIGHT, TOP, BOTTOM, RIDGE, S, N, W, E
+import Tkinter as tk
 from ImageTk import PhotoImage
 from watchdog.observers import Observer
 from watchdogEventHandler import FileCreatedEventHandler
 from common import *
-from websearch import searchFullContact, getList
+from websearch import searchFullContact, searchPipl, getList
 from subjectHandler import NewSubjectDetectedEventHandler
 from web_data_iterator import WebPicturesIterator, SocialNetworkIterator
+from thumbnails_carrousel_frame import ThumbnailsCarrouselFrame
+from face_ui_frames import AlertPopup
+
+
+DISPLAY_ALARM_DELAY = 30000
+TOGGLE_ALARM_DELAY = 250
+MAX_TOGGLE_ALAM_COUNT = 41
+CHECK_PENDING_WORK_DELAY = 2000
+ROTATE_WEB_PICTURE_DELAY = 2000
 
 
 def configureArguments():
@@ -26,7 +35,7 @@ def configureArguments():
     parser.add_argument('--haarFolder', help="Folder containing HAAR cascades.",
                         default="/home/juan/ciberpunks/opencv-2.4.11/data/haarcascades")
     parser.add_argument('--outputWidth', help="Output with for images to display in windows.",
-                        type=int, default="600")
+                        type=int, default="500")
     parser.add_argument('--log', help="Log level for logging.", default="WARNING")
 
     return parser.parse_args()
@@ -50,7 +59,7 @@ class FaceIDApp():
         # screenHeight = self.rootWindow.winfo_screenheight()
 
         self.rootWindow.title('Face Identification App')
-        self.rootWindow.geometry('900x800+440+0')
+        self.rootWindow.geometry('1100x900+340+0')
         self.rootWindow.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.haarFolder = args.haarFolder
@@ -59,8 +68,16 @@ class FaceIDApp():
         self.fontFamily = 'System'
 
         self.mainFrame = self.buildMainFrame()
-        self.buildLeftFrame()
-        self.buildRightFrame()
+
+        contentFrame = tk.Frame(self.mainFrame, bg='black', bd=0)
+        self.leftFrame = self.buildLeftFrame(contentFrame)
+        self.rightFrame = self.buildRightFrame(contentFrame)
+        contentFrame.pack(side=tk.TOP)
+
+        self.thumbnailsCarrousel = ThumbnailsCarrouselFrame(self.mainFrame, 8)
+        self.thumbnailsCarrousel.pack(side=tk.BOTTOM)
+
+        self.alertPopup = None
 
         self.loadFaces()
 
@@ -84,49 +101,51 @@ class FaceIDApp():
         logging.debug('Faces loaded.')
 
     def buildMainFrame(self):
-        f = Frame(self.rootWindow)
+        f = tk.Frame(self.rootWindow)
         im = Image.open('resources/background00.jpg')
         self.bgImage = PhotoImage(im)
-        bgImageLabel = Label(f, image=self.bgImage, bd=0)
+        bgImageLabel = tk.Label(f, image=self.bgImage, bd=0)
         bgImageLabel.place(x=0, y=0)
-        f.pack(fill=BOTH, expand=YES)
+        f.pack(fill=tk.BOTH, expand=tk.YES)
         return f
 
-    def buildLeftFrame(self):
-        self.leftFrame = Frame(self.mainFrame)
-        self.leftFrame.configure(background="black", padx=3, pady=3)
+    def buildLeftFrame(self, container):
+        f = tk.Frame(container)
+        f.configure(background="black", padx=5, pady=5)
 
         rowCount = 0
-        self.subjectPictureLabel = Label(self.leftFrame, bd=0)
+        self.subjectPictureLabel = tk.Label(f, bd=0)
         self.subjectPictureLabel.grid(row=rowCount, column=0)
         rowCount += 1
 
         labelFont = tkFont.Font(family=self.fontFamily, size=26)
-        self.subjectNameLabel = Label(self.leftFrame)
+        self.subjectNameLabel = tk.Label(f)
         self.subjectNameLabel.configure(font=labelFont, bg='black', fg='white')
         self.subjectNameLabel.grid(row=rowCount, column=0)
         rowCount += 1
 
-        self.buildSubjectDataFrame(self.leftFrame)
+        self.buildSubjectDataFrame(f)
         self.subjectDataFrame.grid(row=rowCount, column=0)
         rowCount += 1
 
-        self.leftFrame.pack(side=LEFT)
+        f.pack(side=tk.LEFT)
+        return f
 
-    def buildRightFrame(self):
-        self.rightFrame = Frame(self.mainFrame)
-        self.rightFrame.configure(background="black", padx=3, pady=3)
-        self.listFacesLabel = Label(self.rightFrame)
+    def buildRightFrame(self, container):
+        f = tk.Frame(container)
+        f.configure(background="black", padx=5, pady=5)
+        self.listFacesLabel = tk.Label(f)
         self.listFacesLabel.config(borderwidth=0)
-        self.listFacesLabel.pack(side=TOP)
+        self.listFacesLabel.pack(side=tk.TOP)
 
-        self.webPictureLabel = Label(self.rightFrame, height=200, width=200, bd=0)
-        self.webPictureLabel.pack(side=BOTTOM)
+        self.webPictureLabel = tk.Label(f, height=200, width=200, bd=0, bg='black')
+        self.webPictureLabel.pack(side=tk.BOTTOM)
 
-        self.rightFrame.pack(side=RIGHT)
+        f.pack(side=tk.RIGHT)
+        return f
 
     def buildSubjectDataFrame(self, container):
-        self.subjectDataFrame = Frame(container)
+        self.subjectDataFrame = tk.Frame(container)
 
         self.snType = self.addSubjectField(self.subjectDataFrame, 'Social network:', '', 0)
         self.snUsername = self.addSubjectField(self.subjectDataFrame, 'Username:', '', 1)
@@ -136,29 +155,53 @@ class FaceIDApp():
         self.snBio = self.addSubjectField(self.subjectDataFrame, 'Bio:', '', 5)
 
     def addSubjectField(self, container, name, value, row):
-        labelFont = tkFont.Font(family=self.fontFamily, size=13)
+        labelFont = tkFont.Font(family=self.fontFamily, size=12)
 
-        descLabel = Label(container, text=name, bg='black', fg='green', font=labelFont)
-        descLabel.grid(row=row, column=0, sticky=W + E + N + S)
+        descLabel = tk.Label(container, text=name, bg='black', fg='white', font=labelFont)
+        descLabel.grid(row=row, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
-        label = Label(container, text=value, relief=RIDGE, width=30, bg='black', fg='green', bd=0, font=labelFont)
-        label.grid(row=row, column=1, sticky=W + E + N + S)
+        label = tk.Label(container, text=value, relief=tk.RIDGE, width=30, bg='black', fg='white', bd=0, font=labelFont)
+        label.grid(row=row, column=1, sticky=tk.W + tk.E + tk.N + tk.S)
 
         return label
 
     def checkPendingWork(self):
-        """
-        Check every 500 ms if there is something new in the queue.
-        """
-        if not self.subjectsQueue.empty():
-            logging.info('Subjects queue is not empty!')
+        if self.subjectsQueue.empty():
+            # Check every configured ms if there is something new in the queue.
+            self.rootWindow.after(CHECK_PENDING_WORK_DELAY, self.checkPendingWork)
+        else:
+            self.thumbnailsCarrousel.stop()
+            self.closeAlarmAlert()
+            logging.info('New subject found!')
             name, email, img = self.newSubjectHandler.newSubject(self.subjectsQueue.get())
 
             self.showDetectedSubject(name, img)
             self.showCollectedFaces()
             self.launchSearch(name, email)
+            self.rootWindow.after(DISPLAY_ALARM_DELAY, self.showAlarm)
 
-        self.rootWindow.after(500, self.checkPendingWork)
+    def closeAlarmAlert(self):
+        if self.alertPopup is not None:
+            self.alertPopup.destroy()
+            self.alertPopup = None
+        self.leftFrame.config(bg='black')
+        self.leftFrame.pack()
+
+    def showAlarm(self):
+        self.alertPopup = AlertPopup()
+        self.toggleAlarmCount = 0
+        self.toggleAlarm()
+
+    def toggleAlarm(self):
+        if self.toggleAlarmCount == MAX_TOGGLE_ALAM_COUNT:
+            self.rootWindow.after(CHECK_PENDING_WORK_DELAY, self.checkPendingWork)
+        else:
+            color = 'red' if self.toggleAlarmCount % 2 == 0 else 'black'
+
+            self.leftFrame.config(bg=color)
+            self.leftFrame.pack()
+            self.toggleAlarmCount += 1
+            self.rootWindow.after(TOGGLE_ALARM_DELAY, self.toggleAlarm)
 
     def showDetectedSubject(self, name, image):
         logging.debug('Showing detected subject {0}'.format(name))
@@ -186,32 +229,39 @@ class FaceIDApp():
     def launchSearch(self, name, email):
         result = searchFullContact(email)
 
-        self.webPicturesIterator = WebPicturesIterator(getList(result, 'photos'))
+        photoUrls = [photo.get('url', '') for photo in getList(result, 'photos')]
+        self.webPicturesIterator = WebPicturesIterator(photoUrls)
         self.socialNetworkIterator = SocialNetworkIterator(getList(result, 'socialProfiles'))
         self.rotateWebData()
 
-        # self.showWebPages(result)
+        thumbnails, _, _ = searchPipl(email)
+
+        twitterThumbs = [t for t in thumbnails if 'twitter.com' in t[2]]
+        others = [t for t in thumbnails if 'twitter.com' not in t[2]]
+
+        self.thumbnailsCarrousel.start(twitterThumbs[:2] + others)
 
     def rotateWebData(self):
         size = 200, 200
         rotate = False
 
         logging.debug('Trying to iterate web image...')
-        if self.webPicturesIterator.hastNext():
-            logging.debug('Next image!')
+        if self.webPicturesIterator.hasNext():
+            logging.debug('Next image found!')
             image = self.webPicturesIterator.next()
-            # TODO: keep ratio when resizing image.- jarias
-            image = image.resize(size)
-            self.currentWebPicture = PhotoImage(image)
-            self.webPictureLabel.configure(image=self.currentWebPicture)
-            self.webPictureLabel.pack()
+            if image is not None:
+                # TODO: keep ratio when resizing image.- jarias
+                image = image.resize(size)
+                self.currentWebPicture = PhotoImage(image)
+                self.webPictureLabel.configure(image=self.currentWebPicture)
+                self.webPictureLabel.pack()
             rotate = True
         else:
             logging.debug('No images detected.')
 
         logging.debug('Trying to iterate social network...')
-        if self.socialNetworkIterator.hastNext():
-            logging.debug('Next social network!')
+        if self.socialNetworkIterator.hasNext():
+            logging.debug('Next social network found!')
             profileType, username, followers, following, url, bio = self.socialNetworkIterator.next()
             self.snType.configure(text=profileType)
             self.snType.grid(row=0, column=1)
@@ -224,10 +274,10 @@ class FaceIDApp():
         else:
             logging.debug('No social networks detected.')
 
-        self.leftFrame.pack(side=LEFT)
+        self.leftFrame.pack()
 
         if rotate:
-            self.rootWindow.after(2000, self.rotateWebData)
+            self.rootWindow.after(ROTATE_WEB_PICTURE_DELAY, self.rotateWebData)
 
     def showWebPages(self, result):
         for profile in getList(result, 'socialProfiles'):
@@ -248,6 +298,8 @@ class FaceIDApp():
 
     def on_closing(self):
         logging.debug('Trying to exit FaceIDApp...')
+        self.closeAlarmAlert()
+        self.thumbnailsCarrousel.stop()
         self.observer.stop()
         self.observer.join()
         self.rootWindow.destroy()
@@ -260,7 +312,7 @@ def main():
     logging.info('Starting face ID UI...')
 
     logging.debug('Initializing Graphical UI...')
-    rootWindow = Tk()
+    rootWindow = tk.Tk()
     FaceIDApp(rootWindow, args)
 
     logging.debug('Start the GUI')

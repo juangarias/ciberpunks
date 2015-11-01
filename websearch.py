@@ -57,13 +57,23 @@ def searchPipl(email):
         soup = BeautifulSoup(page, 'html.parser')
         # logging.debug('Search return OK {0}.'.format(soup.prettify()))
 
-        webResults = soup.find_all('div', class_='line1 truncate')
-        links = map(extractSanitizedResultLink, webResults)
+        linkDivs = soup.find_all('div', class_='line1 truncate')
+        links = map(extractSanitizedResultLink, linkDivs)
         linksGrouped = groupSimilarLinks(links)
 
-        webResults = soup.find_all('img', class_='thumbnail single_person hidden')
-        thumbnailsFull = map((lambda img: img['src']), webResults)
-        thumbnails = filter((lambda imgSrc: not imgSrc.startswith('/static')), thumbnailsFull)
+        thumbnails = []
+        webResults = soup.find_all('div', class_='profile_result group')
+        for result in webResults:
+            div = result.find('div', class_='line2 truncate')
+            img = result.find('img', class_='thumbnail single_person hidden')
+
+            if div is not None and img is not None and not img['src'].startswith('/static'):
+                description = ''
+                for s in div.stripped_strings:
+                    description = s
+
+                iconUrl = 'https://pipl.com' + div.img['src']
+                thumbnails.append((iconUrl, description, img['src']))
 
         profile = extractProfile(soup)
 

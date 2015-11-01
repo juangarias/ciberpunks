@@ -7,20 +7,19 @@ from exceptions import StopIteration
 
 class WebDataIterator(object):
 
-    def __init__(self, webData):
-        self.data = webData
+    def __init__(self, items):
+        self.data = items
         self.index = 0
         self.count = len(self.data)
 
-    def hastNext(self):
+    def hasNext(self):
         return self.index < self.count
 
     def next(self):
-        if not self.hastNext():
+        if not self.hasNext():
             raise StopIteration
 
         data = self.internalNext()
-
         self.index += 1
 
         if self.hasReachedEnd():
@@ -38,59 +37,85 @@ class WebDataIterator(object):
 
 class WebPicturesIterator(WebDataIterator):
 
-    def __init__(self, webPictures):
-        super(self.__class__, self).__init__(webPictures)
+    def __init__(self, items):
+        super(WebPicturesIterator, self).__init__(items)
         self.cache = []
 
     def internalNext(self):
-        if self.imageInCache():
-            image = self.cache[self.index]
+        if self.elementInCache():
+            element = self.cache[self.index]
         else:
-            photo = self.data[self.index]
-            image = None
+            item = self.data[self.index]
+            element = self.buildElement(item)
 
-            if 'url' in photo:
-                try:
-                    url = photo.get('url')
-                    logging.debug('Trying get image from {0}...'.format(url))
-                    req = urllib2.urlopen(url)
-                    if req is not None:
-                        image = Image.open(BytesIO(req.read()))
-                        req.close()
-                        logging.debug('Image downloaded OK.')
-                    else:
-                        logging.warning('Call to urllib2.urlopen returned None.')
-                except urllib2.URLError as e:
-                    logging.exception('Error getting image from URL', e)
-                    pass
+            # If an error occurs append None in the cache anyway, to keep the synchro with index.- jarias
+            self.cache.append(element)
 
-            self.cache.append(image)
+        return element
 
-        return image
+    def buildElement(self, photoUrl):
+        image = None
 
-    def imageInCache(self):
+        try:
+            logging.debug('Trying download image from {0}...'.format(photoUrl))
+            req = urllib2.urlopen(photoUrl)
+            if req is not None:
+                image = Image.open(BytesIO(req.read()))
+                req.close()
+                logging.debug('Image downloaded OK.')
+            else:
+                logging.warning('Call to urllib2.urlopen returned None.')
+        except urllib2.HTTPError as e:
+            logging.error('HTTP Error getting image from URL {0}'.format(photoUrl))
+            logging.error('HTTP Error message {0}'.format(e.message))
+        except urllib2.URLError as e:
+            logging.error('Error getting image from URL {0}'.format(photoUrl))
+            logging.error('Error message {0}'.format(e.message))
+        finally:
+            return image
+
+    def elementInCache(self):
         return self.index < len(self.cache)
+
+
+class ThumbnailsIterator(WebPicturesIterator):
+
+    def __init__(self, items):
+        super(ThumbnailsIterator, self).__init__(items)
+
+    def buildElement(self, thumbnail):
+        iconUrl, description, photoUrl = thumbnail
+
+        icon = super(ThumbnailsIterator, self).buildElement(iconUrl)
+        image = super(ThumbnailsIterator, self).buildElement(photoUrl)
+
+        return icon, description, image
 
 
 class SocialNetworkIterator(WebDataIterator):
 
     def __init__(self, socialNetworkData):
-        super(self.__class__, self).__init__(socialNetworkData)
+        super(SocialNetworkIterator, self).__init__(socialNetworkData)
 
-    def extractValue(self, profile, key):
+    def getValue(self, profile, key):
+        value = ''
         if key in profile:
-            return profile.get(key)
-        else:
-            return ''
+            value = profile.get(key)
+            if isinstance(value, basestring):
+                logging.debug('Removing special chars from {0}'.format(value))
+                value = value.replace("\r", '').replace("\n", ' ')
+                logging.debug('Result {0}'.format(value))
+
+        return value
 
     def internalNext(self):
         profile = self.data[self.index]
 
-        profileType = self.extractValue(profile, 'typeName')
-        username = self.extractValue(profile, 'username')
-        followers = self.extractValue(profile, 'followers')
-        following = self.extractValue(profile, 'following')
-        url = self.extractValue(profile, 'url')
-        bio = self.extractValue(profile, 'bio')
+        profileType = self.getValue(profile, 'typeName')
+        username = self.getValue(profile, 'username')
+        followers = self.getValue(profile, 'followers')
+        following = self.getValue(profile, 'following')
+        url = self.getValue(profile, 'url')
+        bio = self.getValue(profile, 'bio')
 
         return profileType, username, followers, following, url, bio
