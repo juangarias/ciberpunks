@@ -1,23 +1,15 @@
 #!/usr/bin/python
 # coding=utf-8
-
 import argparse
 import logging
 import os
-import platform
 import sys
 import cv2
 import paramiko
 from curses import *
 from common import configureLogging, encodeSubjectPictureName, calculateScaledSize, drawLabel
 
-ESCAPE_KEY = 27
-BACKSPACE_KEY = 263
-
-if platform.system() == 'Darwin':
-    ENTER_KEY = 13
-else:
-    ENTER_KEY = 10
+ENTER_KEY = 10
 
 
 def configureArguments():
@@ -27,11 +19,11 @@ def configureArguments():
     parser.add_argument('--sshUser', help='Remote user for writing collected faces in remote host.',
                         default='juan')
     parser.add_argument('--sshPassword', help='Remote password for writing collected faces in remote host.',
-                        default='juan')
+                        default='juancito')
     parser.add_argument('--tempLocalFolder', help='Temporary local folder for writing collected faces.',
                         default='/home/juan/ciberpunks/faces/news')
     parser.add_argument('--remoteFolder', help='Remote folder for writing collected faces.',
-                        default='/Users/juan/faces/news')
+                        default='/home/juan/ciberpunks/faces/news')
     parser.add_argument('--outputWidth', help='Output with for images to display in windows.',
                         default="600")
     parser.add_argument('--log', help='Log level for logging.', default='WARNING')
@@ -45,7 +37,7 @@ def readInput(stdscr, y, x):
 
     invalidChars = list('\\ºª!|·$%/()=¡^`[]{}*+:;<>,')
 
-    while c != 10:
+    while c != ENTER_KEY:
         if c < 256:
             if chr(c) in invalidChars:
                 stdscr.delch(y, x)
@@ -76,7 +68,7 @@ def drawInputWindow(stdscr):
     stdscr.addstr(yPos, xPos, "Ingrese su e-mail: ")
     (emailY, emailX) = stdscr.getyx()
     yPos += 3
-    stdscr.addstr(yPos, xPos, "===== NO enviamos spam... =====")
+    stdscr.addstr(yPos, xPos, "===== NO enviamos spam ;) =====")
     yPos += 1
 
     echo()
@@ -112,8 +104,6 @@ def getUserPicture(outputWidth):
 
     cv2.destroyWindow(picWin)
     cv2.waitKey(1)
-    cv2.waitKey(2)
-    cv2.waitKey(3)
 
     logging.debug('Picture taken.')
 
@@ -194,23 +184,24 @@ def openSSH(sshHost, sshUser, sshPassword):
 
 def tryCloseConnection(client):
     try:
-        client.close()
+        if client is not None:
+            client.close()
     except:
         pass
 
 
 def main():
-    returnCode = 9
     args = configureArguments()
     configureLogging(args.log, 'window_input.log')
 
+    returnCode = 9
+    sshClient = None
+    name = ''
+    email = ''
+
     try:
-        sshClient = openSSH(args.sshHost, args.sshUser, args.sshPassword)
-
         stdscr = initCurses()
-
-        name = ''
-        email = ''
+        sshClient = openSSH(args.sshHost, args.sshUser, args.sshPassword)
 
         while not name or not email:
             (name, email) = drawInputWindow(stdscr)
