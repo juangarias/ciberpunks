@@ -16,6 +16,9 @@ from common import configureLogging, decodeSubjectPictureName, validImage
 from websearch import searchPipl, searchBuscarCUIT, searchFullContact, getList
 
 
+WEB_BROWSER_OPEN_DELAY = 15
+
+
 def configureArguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--newSubjectsFolder', help="Foder containing new faces files.",
@@ -29,8 +32,8 @@ class NewSubjectDetectedEventHandler():
     def newSubject(self, picturePath):
         (_, filename) = os.path.split(picturePath)
         name, email = decodeSubjectPictureName(filename)
-        # doBuscarCUITSearch(name)
         # doFullContactSearch(email)
+        doBuscarCUITSearch(name)
         doPiplSearch(email)
 
     def process_IN_CREATE(self, event):
@@ -45,7 +48,7 @@ class NewSubjectDetectedEventHandler():
 def doBuscarCUITSearch(name):
     subjects = searchBuscarCUIT(name)
 
-    engine = speaker.OSXSpeaker('Paulina')
+    engine = speaker.LinuxEspeak('spanish-latin-american')
 
     for name, cuitPre, dni, digitoVerificador in subjects:
         logging.info("Sujeto encontrado: [{0}] - CUIT [{1}-{2}-{3}]".format(name, cuitPre, dni, digitoVerificador))
@@ -61,8 +64,9 @@ def doBuscarCUITSearch(name):
         engine.say(digitoVerificador)
 
         logging.debug("Running engine to speak...")
-        engine.runAndWait()
-        logging.debug("Speak finished.")
+
+    engine.runAndWait()
+    logging.debug("Speak finished.")
 
 
 def doFullContactSearch(email):
@@ -96,15 +100,7 @@ def doFullContactSearch(email):
 
 
 def doPiplSearch(email):
-    thumbnails, groupedLinks, profile = searchPipl(email)
-
-    # for category, links in groupedLinks:
-        # print category
-
-        # for link in links:
-        #    webbrowser.open(link, new=0)
-        #    time.sleep(3)
-        #    print link
+    _, groupedLinks, profile = searchPipl(email)
 
     speaker = LinuxEspeak('spanish-latin-american')
     speaker.say(profile.get('career', ''))
@@ -112,6 +108,14 @@ def doPiplSearch(email):
     speaker.say(profile.get('location', ''))
     speaker.say(profile.get('usernames', ''))
     speaker.say(profile.get('associated with', ''))
+
+    for (category, links) in groupedLinks:
+        if category != 'twitter.com':
+            for l in links:
+                webbrowser.open(l)
+                time.sleep(WEB_BROWSER_OPEN_DELAY)
+
+    os.system('pkill chromium')
 
 
 def main():

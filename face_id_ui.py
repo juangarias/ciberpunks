@@ -230,11 +230,16 @@ class FaceIDApp():
         result = searchFullContact(email)
 
         photoUrls = [photo.get('url', '') for photo in getList(result, 'photos')]
+        thumbnails, _, profile = searchPipl(email)
+
+        logging.warning('lala {0}'.format(profile.get('mainPicture')))
+
+        if 'mainPicture' in profile:
+            photoUrls.append(profile.get('mainPicture'))
+
         self.webPicturesIterator = WebPicturesIterator(photoUrls)
         self.socialNetworkIterator = SocialNetworkIterator(getList(result, 'socialProfiles'))
         self.rotateWebData()
-
-        thumbnails, _, _ = searchPipl(email)
 
         twitterThumbs = [t for t in thumbnails if 'twitter.com' in t[2]]
         others = [t for t in thumbnails if 'twitter.com' not in t[2]]

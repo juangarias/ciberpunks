@@ -50,6 +50,7 @@ def searchFullContact(email):
 
 
 def searchPipl(email):
+    logging.debug('Searching pipl.com with email: [{0}]'.format(email))
     url = 'https://pipl.com/search/?q={0}&l=argentina&sloc=&in=5'.format(email)
     page = urllib2.urlopen(url)
 
@@ -59,6 +60,7 @@ def searchPipl(email):
 
         linkDivs = soup.find_all('div', class_='line1 truncate')
         links = map(extractSanitizedResultLink, linkDivs)
+        links = filter(None, links)
         linksGrouped = groupSimilarLinks(links)
 
         thumbnails = []
@@ -92,12 +94,16 @@ def getList(response, key):
 
 
 def extractSanitizedResultLink(div):
-    stripped = div.string.strip()
+    possibleLink = div.string
 
-    if not stripped.startswith('http://'):
-        stripped = 'http://' + stripped
+    if possibleLink is not None:
+        stripped = possibleLink.strip()
+        if not stripped.startswith('http://'):
+            stripped = 'http://' + stripped
 
-    return stripped
+        return stripped
+    else:
+        return None
 
 
 def groupSimilarLinks(links):
@@ -110,9 +116,20 @@ def groupSimilarLinks(links):
 
 def extractProfile(soup):
     profile = dict()
-    profileDiv = soup.find('div', {'id': 'profile_container_middle'})
-    if profileDiv:
-        for row in profileDiv.find_all('div', class_='row group'):
+    logging.debug('Trying to extract profile from pipl.com search result...')
+
+    profileTopDiv = soup.find('div', {'id': 'profile_container_top'})
+    if profileTopDiv is not None:
+        logging.debug('Profile top div found!')
+        profileImageDiv = profileTopDiv.find('div', {'id': 'profile_image'})
+        if profileImageDiv is not None:
+            logging.debug('Profile_image found!')
+            profile['mainPicture'] = profileImageDiv.img['src']
+
+    profileMiddleDiv = soup.find('div', {'id': 'profile_container_middle'})
+    if profileMiddleDiv is not None:
+        logging.debug('Profile container middle found!')
+        for row in profileMiddleDiv.find_all('div', class_='row group'):
             fieldLabelDiv = row.find('div', class_='field_label')
             valuesDiv = row.find('div', class_='values')
 
