@@ -8,8 +8,7 @@ Instalar pip (para poder instalar fácilmente todas las otras dependencias)
   * Instalar los binarios, para poder usar la librería
   * Descargar los archivos HAAR (xml para detección de objetos) que vienen con los fuentes
 * numpy (Debería venir junto con cv2)
-* pyinotify (https://github.com/seb-m/pyinotify) para Linux
-* watchdog para Mac OS X
+* watchdog
 * urllib2
 * pyttsx
 * BeautifulSoup
@@ -29,6 +28,9 @@ Las guarda recortadas y estandarizadas para luego poder compararlas.
 Detecta nuevos archivos creados en una carpeta de entrada y dispara una secuencia de imagenes leídas de una carpeta.
 Esta carpeta es la "base de datos" de caras.
 Simula la búsqueda de un rostro en una base de datos.
+
+#####crawler.py
+Detecta nuevos archivos creados en una carpeta de entrada y dispara una busqueda en diferentes sitios. Luego abre un browser para desplegar las paginas encontradas.
 
 ###Bases de datos de rostros
 
