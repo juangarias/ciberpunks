@@ -17,14 +17,18 @@ class MultipleSSHClient(object):
             self.sshClients.append(self.openSSH(server, user, pwd))
 
     def openSSH(self, sshHost, sshUser, sshPassword):
-        sshClient = paramiko.SSHClient()
-        sshClient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            sshClient = paramiko.SSHClient()
+            sshClient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        logging.debug('Trying to connect to SSH server {0}...'.format(sshHost))
-        sshClient.connect(sshHost, username=sshUser, password=sshPassword)
-        logging.debug('Connect to SSH server OK.')
+            logging.debug('Trying to connect to SSH server {0}...'.format(sshHost))
+            sshClient.connect(sshHost, username=sshUser, password=sshPassword)
+            logging.debug('Connect to SSH server OK.')
 
-        return sshClient
+            return sshClient
+        except:
+            logging.error('Could not connect to server.')
+            raise paramiko.SSHException('Could not connect to server')
 
     def send(self, filename, localpath, remoteFolder):
         for sshClient in self.sshClients:
