@@ -6,17 +6,16 @@ import time
 import argparse
 import Queue
 import urllib2
-import numpy as np
 import webbrowser
-import cv2
 from watchdog.observers import Observer
 from watchdogEventHandler import FileCreatedEventHandler
-from speaker import *
+from speaker import LinuxEspeak
 from common import configureLogging, decodeSubjectPictureName, validImage, getFilename
 from websearch import searchPipl, searchBuscarCUIT, searchFullContact, getList
 
 
 WEB_BROWSER_OPEN_DELAY = 15
+SPANISH_VOICE = 'spanish-latin-am'
 
 
 def configureArguments():
@@ -48,7 +47,7 @@ class NewSubjectDetectedEventHandler():
 def doBuscarCUITSearch(name):
     subjects = searchBuscarCUIT(name)
 
-    engine = speaker.LinuxEspeak('spanish-latin-american')
+    engine = LinuxEspeak(SPANISH_VOICE)
 
     for name, cuitPre, dni, digitoVerificador in subjects:
         logging.info("Sujeto encontrado: [{0}] - CUIT [{1}-{2}-{3}]".format(name, cuitPre, dni, digitoVerificador))
@@ -69,6 +68,7 @@ def doBuscarCUITSearch(name):
     logging.debug("Speak finished.")
 
 
+'''
 def doFullContactSearch(email):
     response = searchFullContact(email)
 
@@ -97,17 +97,18 @@ def doFullContactSearch(email):
 
         if 'bio' in profile:
             print(profile.get('bio'))
+'''
 
 
 def doPiplSearch(email):
     _, groupedLinks, profile = searchPipl(email)
 
-    speaker = LinuxEspeak('spanish-latin-american')
-    speaker.say(profile.get('career', ''))
-    speaker.say(profile.get('education', ''))
-    speaker.say(profile.get('location', ''))
-    speaker.say(profile.get('usernames', ''))
-    speaker.say(profile.get('associated with', ''))
+    speaker = LinuxEspeak(SPANISH_VOICE)
+    safeSay(speaker, profile, 'career', 'Experiencia laboral')
+    safeSay(speaker, profile, 'education', 'Estudios')
+    safeSay(speaker, profile, 'location', 'País')
+    safeSay(speaker, profile, 'usernames', 'Nombres de usuario')
+    safeSay(speaker, profile, 'associated with', 'En contacto con')
 
     for (category, links) in groupedLinks:
         if category != 'twitter.com':
@@ -115,7 +116,13 @@ def doPiplSearch(email):
                 webbrowser.open(l)
                 time.sleep(WEB_BROWSER_OPEN_DELAY)
 
-    os.system('pkill chromium')
+    os.system('pkill firefox')
+
+
+def safeSay(speaker, profile, key, title):
+    if key in profile:
+        speaker.say(title)
+        speaker.say(profile.get(key, ''))
 
 
 def main():
