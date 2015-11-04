@@ -14,8 +14,8 @@ Instalar pip (para poder instalar fácilmente todas las otras dependencias)
 * BeautifulSoup4
 * paramiko
 
-sudo apt-get install git python-pip python-opencv espeak
-sudo pip install watchdog pyttsx beautifulsoup4 paramiko
+`sudo apt-get install git python-pip python-opencv espeak`
+`sudo pip install watchdog pyttsx beautifulsoup4 paramiko`
 
 ###Uso
 
