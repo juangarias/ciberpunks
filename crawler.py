@@ -5,13 +5,12 @@ import logging
 import time
 import argparse
 import Queue
-import urllib2
 import webbrowser
 from watchdog.observers import Observer
 from watchdogEventHandler import FileCreatedEventHandler
 from speaker import LinuxEspeak
-from common import configureLogging, decodeSubjectPictureName, validImage, getFilename
-from websearch import searchPipl, searchBuscarCUIT, searchFullContact, getList
+from common import configureLogging, decodeSubjectPictureName, getFilename
+from websearch import searchPipl, searchBuscarCUIT
 
 
 WEB_BROWSER_OPEN_DELAY = 15
