@@ -9,6 +9,10 @@ picWin = "Sonria..."
 
 try:
     camera = cv2.VideoCapture(0)
+    if not camera.isOpened():
+        logging.error("Arrgghhh! The camera is not working!")
+        exit(0)
+
     outputSize = calculateScaledSize(500, capture=camera)
 
     cv2.namedWindow(picWin)

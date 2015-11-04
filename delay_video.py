@@ -20,25 +20,28 @@ def main():
     picWin = "Sonria..."
 
     try:
-        camera = cv2.VideoCapture('/home/juan/ciberpunks/videos/brad_pitt.mp4')
+        camera = cv2.VideoCapture(0)
         outputSize = calculateScaledSize(args.outputWidth, capture=camera)
 
         if not camera.isOpened():
             logging.error('Arrrgggghhhh! Camera is not open...')
-            return
+            return None
 
         cv2.namedWindow(picWin)
 
-        DELAY_FRAMES = 30 * args.delay
-        framesBuffer = [None] * DELAY_FRAMES
+        fps = 25 #camera.get(5)
+        logging.debug('Detected FPS {0}'.format(fps))
 
+        DELAY_FRAMES = fps * args.delay
+        framesBuffer = [None] * DELAY_FRAMES
+        
         logging.debug('Start reading and buffering...')
         for i in xrange(DELAY_FRAMES):
             readOk, image = camera.read()
             framesBuffer.append(image)
 
         logging.debug('Start display of buffered images and queue new ones...')
-        while cv2.waitKey() == -1:
+        while True:
             for i in xrange(DELAY_FRAMES):
                 readOk, image = camera.read()
                 delayedImage = framesBuffer[i]
