@@ -8,6 +8,7 @@ import cv2
 import paramiko
 from curses import *
 from common import configureLogging, encodeSubjectPictureName, calculateScaledSize, drawLabel
+from multiple_ssh_client import MultipleSSHClient
 
 ENTER_KEY = 10
 
@@ -140,16 +141,7 @@ def savePicture(sshClient, image, name, email, tempFolder, remoteFolder):
     ret = cv2.imwrite(localpath, image, formatParams)
     logging.debug('Local file written in {0} with result {1}.'.format(localpath, ret))
 
-    logging.debug('Trying to open SFTP client...')
-    sftpClient = sshClient.open_sftp()
-    logging.debug('Connect to SSH and SFTP server OK.')
-
-    remotepath = remoteFolder + '/' + filename
-    logging.debug('Trying to put remote file to {0}'.format(remotepath))
-    ret = sftpClient.put(localpath, remotepath)
-    logging.debug('File transferred to server in {0} with result {1}.'.format(remotepath, ret))
-
-    tryCloseConnection(sftpClient)
+    sshClient.send(filename, localpath, remoteFolder)
 
 
 def initCurses():
@@ -171,25 +163,6 @@ def destroyCurses():
     os.system('stty sane')
 
 
-def openSSH(sshHost, sshUser, sshPassword):
-    sshClient = paramiko.SSHClient()
-    sshClient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    logging.debug('Trying to connect to SSH server...')
-    sshClient.connect(sshHost, username=sshUser, password=sshPassword)
-    logging.debug('Connect to SSH server OK.')
-
-    return sshClient
-
-
-def tryCloseConnection(client):
-    try:
-        if client is not None:
-            client.close()
-    except:
-        pass
-
-
 def main():
     args = configureArguments()
     configureLogging(args.log, 'window_input.log')
@@ -201,7 +174,7 @@ def main():
 
     try:
         stdscr = initCurses()
-        sshClient = openSSH(args.sshHost, args.sshUser, args.sshPassword)
+        sshClient = MultipleSSHClient(args.sshHost, args.sshUser, args.sshPassword)
 
         while not name or not email:
             (name, email) = drawInputWindow(stdscr)
@@ -214,7 +187,7 @@ def main():
     except KeyboardInterrupt:
         returnCode = 0
     finally:
-        tryCloseConnection(sshClient)
+        sshClient.close()
         cv2.destroyAllWindows()
         destroyCurses()
         sys.exit(returnCode)
