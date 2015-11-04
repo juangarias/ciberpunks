@@ -186,8 +186,11 @@ def main():
 
     except KeyboardInterrupt:
         returnCode = 0
+    except paramiko.SSHException:
+        logging.error('Error when connecting to one or more SSH servers.')
     finally:
-        sshClient.close()
+        if sshClient is not None:
+            sshClient.close()
         cv2.destroyAllWindows()
         destroyCurses()
         sys.exit(returnCode)
