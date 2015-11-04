@@ -184,8 +184,7 @@ class FaceIDApp():
         if self.alertPopup is not None:
             self.alertPopup.destroy()
             self.alertPopup = None
-        self.leftFrame.config(bg='black')
-        self.leftFrame.pack()
+        self.changeSubjectFramesColor('black')
 
     def showAlarm(self):
         self.alertPopup = AlertPopup()
@@ -197,11 +196,24 @@ class FaceIDApp():
             self.rootWindow.after(CHECK_PENDING_WORK_DELAY, self.checkPendingWork)
         else:
             color = 'red' if self.toggleAlarmCount % 2 == 0 else 'black'
-
-            self.leftFrame.config(bg=color)
-            self.leftFrame.pack()
+            self.changeSubjectFramesColor(color)
             self.toggleAlarmCount += 1
             self.rootWindow.after(TOGGLE_ALARM_DELAY, self.toggleAlarm)
+
+    def changeSubjectFramesColor(self, color):
+        self.leftFrame.config(bg=color)
+        self.leftFrame.pack()
+        self.subjectDataFrame.config(bg=color)
+        self.subjectDataFrame.grid()
+
+        fgColor = 'black' if color == 'red' else 'white'
+
+        self.subjectNameLabel.configure(bg=color, fg=fgColor)
+        self.subjectNameLabel.grid()
+
+        for w in self.subjectDataFrame.winfo_children():
+            w.configure(bg=color, fg=fgColor)
+            w.grid()
 
     def showDetectedSubject(self, name, image):
         logging.debug('Showing detected subject {0}'.format(name))
@@ -322,7 +334,6 @@ def main():
 
     logging.debug('Start the GUI')
     rootWindow.mainloop()
-
 # end main
 
 if __name__ == '__main__':

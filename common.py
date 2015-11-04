@@ -20,6 +20,12 @@ def configureLogging(loglevel, logFile=None):
         logging.basicConfig(level=numeric_level, format='%(levelname)s:%(funcName)s:%(message)s')
 
 
+def getFilename(filepath):
+    (_, filenameExt) = os.path.split(filepath)
+    filename, _ = os.path.splitext(filenameExt)
+    return filename
+
+
 def encodeSubjectPictureName(name, email):
     return name.replace(' ', '_') + '-' + email
 

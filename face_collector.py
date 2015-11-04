@@ -14,7 +14,8 @@ def configureArguments():
                         default="/home/juan/ciberpunks/faces/news")
     parser.add_argument('--haarFolder', help="Folder for writing collected faces.",
                         default="/home/juan/ciberpunks/opencv-2.4.11/data/haarcascades")
-    parser.add_argument('--outputWidth', help="Output with for images to display in windows.", default="600")
+    parser.add_argument('--outputWidth', help="Output with for images to display in windows.",
+                        default="600", type=int)
     parser.add_argument('--log', help="Log level for logging.", default="WARNING")
     return parser.parse_args()
 
@@ -62,7 +63,7 @@ def main():
 
     logging.debug("Reading capture...")
     readOk, image = capture.read()
-    outputSize = calculateScaledSize(int(args.outputWidth), image=image)
+    outputSize = calculateScaledSize(args.outputWidth, image=image)
 
     try:
         while (cv2.waitKey(5) == -1 and readOk):

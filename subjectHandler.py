@@ -1,5 +1,4 @@
 import logging
-import os
 import cv2
 from common import *
 
@@ -15,8 +14,7 @@ class NewSubjectDetectedEventHandler():
     def newSubject(self, picturePath):
         logging.debug('New subject detected. Filename {0}'.format(picturePath))
         image = cv2.imread(picturePath)
-        (_, filenameExt) = os.path.split(picturePath)
-        filename, _ = os.path.splitext(filenameExt)
+        filename = getFilename(picturePath)
         name, email = decodeSubjectPictureName(filename)
         outputImage = None
         logging.debug('Image read OK. Name is: {0}'.format(name))

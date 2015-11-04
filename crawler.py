@@ -12,7 +12,7 @@ import cv2
 from watchdog.observers import Observer
 from watchdogEventHandler import FileCreatedEventHandler
 from speaker import *
-from common import configureLogging, decodeSubjectPictureName, validImage
+from common import configureLogging, decodeSubjectPictureName, validImage, getFilename
 from websearch import searchPipl, searchBuscarCUIT, searchFullContact, getList
 
 
@@ -30,7 +30,7 @@ def configureArguments():
 class NewSubjectDetectedEventHandler():
 
     def newSubject(self, picturePath):
-        (_, filename) = os.path.split(picturePath)
+        filename = getFilename(picturePath)
         name, email = decodeSubjectPictureName(filename)
         # doFullContactSearch(email)
         doBuscarCUITSearch(name)
