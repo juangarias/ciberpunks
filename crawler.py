@@ -49,7 +49,11 @@ def doBuscarCUITSearch(name):
 
     engine = LinuxEspeak(SPANISH_VOICE)
 
-    for name, cuitPre, dni, digitoVerificador in subjects:
+    # only say 3 (three) subjects if we found more
+    lastElem = len(subjects) -1 if len(subjects) <= 3 else 3
+
+    for i in xrange(lastElem):
+        name, cuitPre, dni, digitoVerificador = subjects[i]
         logging.info("Sujeto encontrado: [{0}] - CUIT [{1}-{2}-{3}]".format(name, cuitPre, dni, digitoVerificador))
 
         logging.debug("Queueing words to say...")
@@ -110,10 +114,10 @@ def doPiplSearch(email):
     safeSay(speaker, profile, 'usernames', 'Nombres de usuario')
     safeSay(speaker, profile, 'associated with', 'En contacto con')
 
-    for (category, links) in groupedLinks:
+    for (category, subjectLinks) in groupedLinks:
         if category != 'twitter.com':
-            for l in links:
-                webbrowser.open(l)
+            for link in subjectLinks:
+                webbrowser.open(link)
                 time.sleep(WEB_BROWSER_OPEN_DELAY)
 
     os.system('pkill firefox')
