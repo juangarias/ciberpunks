@@ -7,7 +7,7 @@ from common import configureLogging, calculateScaledSize
 
 def configureArguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--delay', help="Seconds to delay the video.", default="15", type=int)
+    parser.add_argument('--delay', help="Seconds to delay the video.", default="10", type=int)
     parser.add_argument('--outputWidth', help="Output width.", default="500", type=int)
     parser.add_argument('--log', help="Log level for logging.", default="WARNING")
     return parser.parse_args()
@@ -29,25 +29,29 @@ def main():
 
         cv2.namedWindow(picWin)
 
-        fps = 25 #camera.get(5)
-        logging.debug('Detected FPS {0}'.format(fps))
+        fps = camera.get(cv2.cv.CV_CAP_PROP_FPS)
+        logging.debug('Detected {0} FPS'.format(fps))
+        fps = fps if fps > 0 else 30
+        logging.debug('Using {0} FPS'.format(fps))
 
-        DELAY_FRAMES = fps * args.delay
-        framesBuffer = [None] * DELAY_FRAMES
-        
-        logging.debug('Start reading and buffering...')
-        for i in xrange(DELAY_FRAMES):
+        frameBufferSize = fps * args.delay
+        framesBuffer = [None] * frameBufferSize
+
+        logging.debug('Start reading and buffering {0} frames...'.format(frameBufferSize))
+        i = 0
+        while cv2.waitKey(1) and i < frameBufferSize:
             readOk, image = camera.read()
-            framesBuffer.append(image)
+            framesBuffer[i] = image
+            i += 1
 
         logging.debug('Start display of buffered images and queue new ones...')
         while True:
-            for i in xrange(DELAY_FRAMES):
+            for i in xrange(frameBufferSize):
                 readOk, image = camera.read()
                 delayedImage = framesBuffer[i]
                 framesBuffer[i] = image
 
-                outputImage = cv2.resize(delayedImage, outputSize)
+                outputImage = delayedImage  # cv2.resize(delayedImage, outputSize)
                 cv2.imshow(picWin, outputImage)
                 cv2.waitKey(1)
 
