@@ -5,9 +5,9 @@ import tkFont
 
 class AlertPopup(tk.Toplevel):
 
-    def __init__(self):
+    def __init__(self, top, left):
         tk.Toplevel.__init__(self)
-        self.geometry('900x150+450+300')
+        self.geometry('900x150+{0}+{1}'.format(left, top))
         self.overrideredirect(True)
 
         container = tk.Frame(self, bg='white', bd=1, padx=1, pady=1)

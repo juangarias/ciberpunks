@@ -1,6 +1,6 @@
 import logging
 import threading
-import ImageTk
+from PIL import ImageTk
 import tkFont
 import Tkinter as tk
 from web_data_iterator import ThumbnailsIterator

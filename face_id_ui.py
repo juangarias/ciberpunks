@@ -8,7 +8,7 @@ from random import randint
 import cv2
 import tkFont
 import Tkinter as tk
-from ImageTk import PhotoImage
+from PIL.ImageTk import PhotoImage
 from watchdog.observers import Observer
 from watchdogEventHandler import FileCreatedEventHandler
 from common import *
@@ -29,12 +29,12 @@ ROTATE_WEB_PICTURE_DELAY = 2000
 def configureArguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--facesFolder', help="Foder containing all faces files.",
-                        default='/home/juan/ciberpunks/faces/at&t_database')
+                        default='c:/Users/admin/ciberpunks/faces/att_database')
     parser.add_argument('--newSubjectsFolder', help="Foder containing new faces files.",
-                        default='/home/juan/ciberpunks/faces/news')
+                        default='c:/Users/admin/ciberpunks/faces/news')
     parser.add_argument('--haarFolder', help="Folder containing HAAR cascades.",
-                        default="/home/juan/ciberpunks/opencv-2.4.11/data/haarcascades")
-    parser.add_argument('--outputWidth', help="Output with for images to display in windows.",
+                        default='c:/Users/admin/ciberpunks/opencv-2.4.11/sources/data/haarcascades')
+    parser.add_argument('--outputWidth', help='Output with for images to display in windows.',
                         type=int, default="500")
     parser.add_argument('--log', help="Log level for logging.", default="WARNING")
 
@@ -55,11 +55,14 @@ class FaceIDApp():
 
     def __init__(self, rootWindow, args):
         self.rootWindow = rootWindow
-        # screenWidth = self.rootWindow.winfo_screenwidth()
-        # screenHeight = self.rootWindow.winfo_screenheight()
+
+        height = int(self.rootWindow.winfo_screenheight() * 0.9)
+        width = int(self.rootWindow.winfo_screenwidth() * 0.85)
+        self.top = 0
+        self.left = self.rootWindow.winfo_screenwidth() - width - 10
 
         self.rootWindow.title('Face Identification App')
-        self.rootWindow.geometry('1100x900+340+0')
+        self.rootWindow.geometry('{0}x{1}+{2}+{3}'.format(width, height, self.left, self.top))
         self.rootWindow.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.haarFolder = args.haarFolder
@@ -187,7 +190,7 @@ class FaceIDApp():
         self.changeSubjectFramesColor('black')
 
     def showAlarm(self):
-        self.alertPopup = AlertPopup()
+        self.alertPopup = AlertPopup(self.left + 200, self.top + 300)
         self.toggleAlarmCount = 0
         self.toggleAlarm()
 
@@ -227,6 +230,9 @@ class FaceIDApp():
             self.subjectPictureLabel.grid()
 
     def showCollectedFaces(self):
+        if len(self.faces) <= 0:
+            return
+
         pos = randint(0, len(self.faces) - 1)
         img = self.faces[pos]
         outputSize = calculateScaledSize(int(self.outputWidth / 2), image=img)
@@ -243,8 +249,6 @@ class FaceIDApp():
 
         photoUrls = [photo.get('url', '') for photo in getList(result, 'photos')]
         thumbnails, _, profile = searchPipl(email)
-
-        logging.warning('lala {0}'.format(profile.get('mainPicture')))
 
         if 'mainPicture' in profile:
             photoUrls.append(profile.get('mainPicture'))
