@@ -20,7 +20,7 @@ SPANISH_VOICE = 'spanish-latin-am'
 def configureArguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--newSubjectsFolder', help="Foder containing new faces files.",
-                        default='/home/juan/ciberpunks/faces/news')
+                        default='/home/juan/')
     parser.add_argument('--log', help="Log level for logging.", default="WARNING")
     return parser.parse_args()
 
@@ -113,9 +113,12 @@ def doPiplSearch(email):
     safeSay(speaker, profile, 'usernames', 'Nombres de usuario')
     safeSay(speaker, profile, 'associated with', 'En contacto con')
 
+    print groupedLinks
+
     for (category, subjectLinks) in groupedLinks:
         if category != 'twitter.com':
             for link in subjectLinks:
+                # logging.debug('Trying to open link {0}'.format(link))
                 webbrowser.open(link)
                 time.sleep(WEB_BROWSER_OPEN_DELAY)
 
