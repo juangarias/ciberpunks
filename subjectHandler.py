@@ -1,4 +1,5 @@
 import logging
+import os
 import cv2
 from common import *
 
@@ -6,9 +7,9 @@ from common import *
 class NewSubjectDetectedEventHandler():
 
     def __init__(self, haarFolder, outputWidth):
-        self.faceCascade = loadCascadeClassifier(haarFolder + "/haarcascade_frontalface_alt2.xml")
-        self.leftEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_lefteye_2splits.xml")
-        self.rightEyeCascade = loadCascadeClassifier(haarFolder + "/haarcascade_righteye_2splits.xml")
+        self.faceCascade = loadCascadeClassifier(os.path.join(haarFolder, 'haarcascade_frontalface_alt2.xml'))
+        self.leftEyeCascade = loadCascadeClassifier(os.path.join(haarFolder, 'haarcascade_lefteye_2splits.xml'))
+        self.rightEyeCascade = loadCascadeClassifier(os.path.join(haarFolder, 'haarcascade_righteye_2splits.xml'))
         self.outputWidth = outputWidth
 
     def newSubject(self, picturePath):

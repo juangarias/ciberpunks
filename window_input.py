@@ -10,21 +10,24 @@ from curses import *
 from common import configureLogging, encodeSubjectPictureName, calculateScaledSize, drawLabel
 from multiple_ssh_client import MultipleSSHClient
 
+
+TAB_KEY = 9
 ENTER_KEY = 10
+BACKSPACE_KEY = 263
 
 
 def configureArguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--sshHost', help='Remote host for writing collected faces.',
-                        default='192.168.1.104')
+                        default='192.168.1.57,192.168.1.121')
     parser.add_argument('--sshUser', help='Remote user for writing collected faces in remote host.',
-                        default='juan')
+                        default='juan,juan')
     parser.add_argument('--sshPassword', help='Remote password for writing collected faces in remote host.',
-                        default='juancito')
+                        default='juancito,juancito')
     parser.add_argument('--tempLocalFolder', help='Temporary local folder for writing collected faces.',
                         default='/home/juan/ciberpunks/faces/news')
     parser.add_argument('--remoteFolder', help='Remote folder for writing collected faces.',
-                        default='/home/juan/ciberpunks/faces/news')
+                        default='/')
     parser.add_argument('--outputWidth', help='Output with for images to display in windows.',
                         default="600")
     parser.add_argument('--log', help='Log level for logging.', default='WARNING')
@@ -32,21 +35,34 @@ def configureArguments():
 
 
 def readInput(stdscr, y, x):
+    startX = x
     stdscr.move(y, x)
     value = ''
     c = stdscr.getch()
 
     invalidChars = list('\\ºª!|·$%/()=¡^`[]{}*+:;<>,')
+    logging.debug('Key is {0}'.format(c))
 
-    while c != ENTER_KEY:
-        if c < 256:
-            if chr(c) in invalidChars:
+    while c != ENTER_KEY and c != TAB_KEY:
+        if c == BACKSPACE_KEY:
+            if x > startX:
+                x -= 1
                 stdscr.delch(y, x)
+                value = value[:-1]
             else:
-                value += chr(c)
-                x += 1
+                stdscr.move(y, startX)
+                value = ''
+        else:
+            if c < 256:
+                if chr(c) in invalidChars:
+                    stdscr.delch(y, x)
+                else:
+                    value += chr(c)
+                    x += 1
+
         c = stdscr.getch()
 
+    logging.debug('Read from input: {0}'.format(value))
     return value
 
 
@@ -63,7 +79,7 @@ def drawInputWindow(stdscr):
     stdscr.addstr(yPos, xPos, "================================")
     yPos += 3
 
-    stdscr.addstr(yPos, xPos, "Ingrese su nombre: ")
+    stdscr.addstr(yPos, xPos, "Ingrese su nombre y apellido: ")
     (nameY, nameX) = stdscr.getyx()
     yPos += 1
     stdscr.addstr(yPos, xPos, "Ingrese su e-mail: ")
@@ -182,7 +198,7 @@ def main():
         img = getUserPicture(int(args.outputWidth))
         savePicture(sshClient, img, name, email, args.tempLocalFolder, args.remoteFolder)
 
-        drawThanksWindow(stdscr)
+        # drawThanksWindow(stdscr)
 
     except KeyboardInterrupt:
         returnCode = 0
