@@ -1,10 +1,11 @@
 import os
+import time
 import pyttsx
 
 
 class LinuxEspeak:
 
-    def __init__(self, voice='', speed='90'):
+    def __init__(self, voice='', speed='120'):
         self.voice = voice
         self.speed = speed
 
@@ -16,6 +17,7 @@ class LinuxEspeak:
         speedParam = ' -s {0} '.format(self.speed)
 
         os.system('espeak ' + voiceParam + speedParam + '"' + phrase + '"')
+        time.sleep(0.5)
 
     def runAndWait(self):
         pass
