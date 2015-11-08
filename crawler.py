@@ -118,13 +118,10 @@ def doPiplSearch(email):
 
     for i in xrange(2):
         for (category, subjectLinks) in groupedLinks:
-            if category != 'twitter.com':
-                for link in subjectLinks:
-                    # logging.debug('Trying to open link {0}'.format(link))
-                    webbrowser.open(link)
-                    time.sleep(WEB_BROWSER_OPEN_DELAY)
-
-    os.system('pkill firefox')
+            for link in subjectLinks:
+                # logging.debug('Trying to open link {0}'.format(link))
+                webbrowser.open(link)
+                time.sleep(WEB_BROWSER_OPEN_DELAY)
 
 
 def safeSay(speaker, profile, key, title):
