@@ -13,7 +13,7 @@ from common import configureLogging, decodeSubjectPictureName, getFilename
 from websearch import searchPipl, searchBuscarCUIT
 
 
-WEB_BROWSER_OPEN_DELAY = 15
+WEB_BROWSER_OPEN_DELAY = 6
 SPANISH_VOICE = 'spanish-latin-am'
 
 
@@ -104,6 +104,7 @@ def doFullContactSearch(email):
 
 
 def doPiplSearch(email):
+    os.system('pkill firefox')
     _, groupedLinks, profile = searchPipl(email)
 
     speaker = LinuxEspeak(SPANISH_VOICE)
@@ -115,12 +116,13 @@ def doPiplSearch(email):
 
     print groupedLinks
 
-    for (category, subjectLinks) in groupedLinks:
-        if category != 'twitter.com':
-            for link in subjectLinks:
-                # logging.debug('Trying to open link {0}'.format(link))
-                webbrowser.open(link)
-                time.sleep(WEB_BROWSER_OPEN_DELAY)
+    for i in xrange(2):
+        for (category, subjectLinks) in groupedLinks:
+            if category != 'twitter.com':
+                for link in subjectLinks:
+                    # logging.debug('Trying to open link {0}'.format(link))
+                    webbrowser.open(link)
+                    time.sleep(WEB_BROWSER_OPEN_DELAY)
 
     os.system('pkill firefox')
 
