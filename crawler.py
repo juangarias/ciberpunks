@@ -105,7 +105,8 @@ def doFullContactSearch(email):
 
 def doPiplSearch(email):
     os.system('pkill firefox')
-    _, groupedLinks, profile = searchPipl(email)
+    time.sleep(1)
+    _, subjectLinks, profile = searchPipl(email)
 
     speaker = LinuxEspeak(SPANISH_VOICE)
     safeSay(speaker, profile, 'career', 'Experiencia laboral')
@@ -114,14 +115,19 @@ def doPiplSearch(email):
     safeSay(speaker, profile, 'usernames', 'Nombres de usuario')
     safeSay(speaker, profile, 'associated with', 'En contacto con')
 
-    print groupedLinks
+    print subjectLinks
+    j = 0
+    limit = len(links) if len(links) < 8 else 8
 
     for i in xrange(2):
-        for (category, subjectLinks) in groupedLinks:
-            for link in subjectLinks:
-                # logging.debug('Trying to open link {0}'.format(link))
-                webbrowser.open(link)
-                time.sleep(WEB_BROWSER_OPEN_DELAY)
+        while j < limit:
+            webbrowser.open(link)
+            j += 1
+            time.sleep(WEB_BROWSER_OPEN_DELAY)
+
+        os.system('pkill firefox')
+        time.sleep(1)
+
 
 
 def safeSay(speaker, profile, key, title):

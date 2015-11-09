@@ -61,7 +61,6 @@ def searchPipl(email):
         linkDivs = soup.find_all('div', class_='line1 truncate')
         links = map(extractSanitizedResultLink, linkDivs)
         links = filter(None, links)
-        linksGrouped = groupSimilarLinks(links)
 
         thumbnails = []
         webResults = soup.find_all('div', class_='profile_result group')
@@ -79,7 +78,7 @@ def searchPipl(email):
 
         profile = extractProfile(soup)
 
-        return thumbnails, linksGrouped, profile
+        return thumbnails, links, profile
 
     except IncompleteRead as e:
         logging.exception('Incomplete read getting data from pipl.com', e)
