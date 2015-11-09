@@ -14,13 +14,13 @@ from websearch import searchPipl, searchBuscarCUIT
 
 
 WEB_BROWSER_OPEN_DELAY = 6
-SPANISH_VOICE = 'spanish-latin-am'
+SPANISH_VOICE = 'spanish-latin-america'
 
 
 def configureArguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--newSubjectsFolder', help="Foder containing new faces files.",
-                        default='/home/juan/')
+                        default='/home/juan/ciberpunks/faces/news')
     parser.add_argument('--log', help="Log level for logging.", default="WARNING")
     return parser.parse_args()
 
@@ -49,7 +49,7 @@ def doBuscarCUITSearch(name):
     engine = LinuxEspeak(SPANISH_VOICE)
 
     # only say 3 (three) subjects if we found more
-    lastElem = len(subjects) -1 if len(subjects) <= 3 else 3
+    lastElem = len(subjects) - 1 if len(subjects) <= 3 else 3
 
     for i in xrange(lastElem):
         name, cuitPre, dni, digitoVerificador = subjects[i]
@@ -105,7 +105,7 @@ def doFullContactSearch(email):
 
 def doPiplSearch(email):
     os.system('pkill firefox')
-    time.sleep(1)
+    time.sleep(2)
     _, subjectLinks, profile = searchPipl(email)
 
     speaker = LinuxEspeak(SPANISH_VOICE)
@@ -116,18 +116,17 @@ def doPiplSearch(email):
     safeSay(speaker, profile, 'associated with', 'En contacto con')
 
     print subjectLinks
-    j = 0
-    limit = len(links) if len(links) < 8 else 8
+    limit = len(subjectLinks) if len(subjectLinks) < 8 else 8
 
     for i in xrange(2):
-        while j < limit:
-            webbrowser.open(link)
-            j += 1
+        logging.debug('Round {0} for open websites.'.format(i))
+        for j in xrange(limit):
+            logging.debug('Opening {0} website.'.format(j))
+            webbrowser.open(subjectLinks[j])
             time.sleep(WEB_BROWSER_OPEN_DELAY)
 
         os.system('pkill firefox')
-        time.sleep(1)
-
+        time.sleep(WEB_BROWSER_OPEN_DELAY)
 
 
 def safeSay(speaker, profile, key, title):
