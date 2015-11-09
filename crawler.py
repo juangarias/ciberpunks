@@ -14,7 +14,7 @@ from websearch import searchPipl, searchBuscarCUIT
 
 
 WEB_BROWSER_OPEN_DELAY = 6
-SPANISH_VOICE = 'spanish-latin-america'
+SPANISH_VOICE = 'spanish-latin-am'
 
 
 def configureArguments():

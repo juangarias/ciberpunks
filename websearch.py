@@ -121,7 +121,7 @@ def extractProfile(soup):
     if profileTopDiv is not None:
         logging.debug('Profile top div found!')
         profileImageDiv = profileTopDiv.find('div', {'id': 'profile_image'})
-        if profileImageDiv is not None:
+        if profileImageDiv is not None and profileImageDiv.img is not None and 'src' in profileImageDiv.img:
             logging.debug('Profile_image found!')
             profile['mainPicture'] = profileImageDiv.img['src']
 
@@ -135,17 +135,18 @@ def extractProfile(soup):
             fieldKey = ''
             fieldValue = ''
 
-            for s in fieldLabelDiv.stripped_strings:
-                fieldKey = s
+            if fieldLabelDiv is not None and valuesDiv is not None:
+                for s in fieldLabelDiv.stripped_strings:
+                    fieldKey = s
 
-            fieldKey = fieldKey.strip().replace(':', '').lower()
+                fieldKey = fieldKey.strip().replace(':', '').lower()
 
-            for li in valuesDiv.find_all('li'):
-                if li.string is not None:
-                    fieldValue += ' ' + li.string.strip().encode('utf-8')
-                elif li.a is not None:
-                    fieldValue += ' ' + li.a.string.strip().encode('utf-8')
+                for li in valuesDiv.find_all('li'):
+                    if li.string is not None:
+                        fieldValue += ' ' + li.string.strip().encode('utf-8')
+                    elif li.a is not None:
+                        fieldValue += ' ' + li.a.string.strip().encode('utf-8')
 
-            profile[fieldKey] = fieldValue
+                profile[fieldKey] = fieldValue
 
     return profile
