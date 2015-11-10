@@ -13,7 +13,7 @@ class NewSubjectDetectedEventHandler():
         self.outputWidth = outputWidth
 
     def newSubject(self, picturePath):
-        logging.debug('New subject detected. Filename {0}'.format(picturePath))
+        #logging.debug('New subject detected. Filename {0}'.format(picturePath))
         image = cv2.imread(picturePath)
         filename = getFilename(picturePath)
         name, email = decodeSubjectPictureName(filename)

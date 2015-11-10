@@ -67,7 +67,7 @@ class FaceIDApp():
 
         self.haarFolder = args.haarFolder
         self.outputWidth = args.outputWidth
-        self.facesFolder = args.facesFolder
+        self.facesFolder = ['c:/Users/admin/ciberpunks/faces/att_database', 'c:/Users/admin/ciberpunks/faces/news']
         self.fontFamily = 'System'
 
         self.mainFrame = self.buildMainFrame()
@@ -78,7 +78,7 @@ class FaceIDApp():
         contentFrame.pack(side=tk.TOP)
 
         self.thumbnailsCarrousel = ThumbnailsCarrouselFrame(self.mainFrame, 8)
-        self.thumbnailsCarrousel.pack(side=tk.BOTTOM)
+        self.thumbnailsCarrousel.pack(side=tk.BOTTOM, pady=100)
 
         self.alertPopup = None
 
@@ -99,8 +99,7 @@ class FaceIDApp():
 
     def loadFaces(self):
         logging.debug('Loading faces from disk...')
-        folders = [self.facesFolder]
-        [self.faces, _, _] = readImages(folders)
+        [self.faces, _, _] = readImages(self.facesFolder)
         logging.debug('Faces loaded.')
 
     def buildMainFrame(self):
@@ -141,8 +140,8 @@ class FaceIDApp():
         self.listFacesLabel.config(borderwidth=0)
         self.listFacesLabel.pack(side=tk.TOP)
 
-        self.webPictureLabel = tk.Label(f, height=200, width=200, bd=0, bg='black')
-        self.webPictureLabel.pack(side=tk.BOTTOM)
+        #self.webPictureLabel = tk.Label(f, height=200, width=200, bd=0, bg='black')
+        #self.webPictureLabel.pack(side=tk.BOTTOM)
 
         f.pack(side=tk.RIGHT)
         return f
@@ -184,13 +183,10 @@ class FaceIDApp():
             self.rootWindow.after(DISPLAY_ALARM_DELAY, self.showAlarm)
 
     def closeAlarmAlert(self):
-        if self.alertPopup is not None:
-            self.alertPopup.destroy()
-            self.alertPopup = None
         self.changeSubjectFramesColor('black')
 
     def showAlarm(self):
-        self.alertPopup = AlertPopup(self.left + 200, self.top + 300)
+        self.alertPopup = AlertPopup(-800, 0)
         self.toggleAlarmCount = 0
         self.toggleAlarm()
 
@@ -253,8 +249,10 @@ class FaceIDApp():
         if 'mainPicture' in profile:
             photoUrls.append(profile.get('mainPicture'))
 
-        self.webPicturesIterator = WebPicturesIterator(photoUrls)
-        self.socialNetworkIterator = SocialNetworkIterator(getList(result, 'socialProfiles'))
+        # self.webPicturesIterator = WebPicturesIterator(photoUrls)
+        self.webPicturesIterator = WebPicturesIterator([])
+        # self.socialNetworkIterator = SocialNetworkIterator(getList(result, 'socialProfiles'))
+        self.socialNetworkIterator = SocialNetworkIterator([])
         self.rotateWebData()
 
         twitterThumbs = [t for t in thumbnails if 'twitter.com' in t[2]]
@@ -299,23 +297,6 @@ class FaceIDApp():
 
         if rotate:
             self.rootWindow.after(ROTATE_WEB_PICTURE_DELAY, self.rotateWebData)
-
-    def showWebPages(self, result):
-        for profile in getList(result, 'socialProfiles'):
-            print(profile.get('type'))
-            print(profile.get('username'))
-
-            if 'followers' in profile:
-                print(profile.get('followers'))
-
-            if 'following' in profile:
-                print(profile.get('following'))
-
-            if 'url' in profile:
-                webbrowser.open_new(profile.get('url'))
-
-            if 'bio' in profile:
-                print(profile.get('bio'))
 
     def on_closing(self):
         logging.debug('Trying to exit FaceIDApp...')

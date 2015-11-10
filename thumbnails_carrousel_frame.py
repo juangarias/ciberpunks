@@ -71,8 +71,9 @@ class ThumbnailsCarrouselFrame(tk.Frame):
         for i in xrange(0, self.size - 2):
             self.showThumbnail(i)
 
-        self.workerThread = threading.Thread(target=self.displayNextThumbnail)
-        self.workerThread.start()
+        #self.workerThread = threading.Thread(target=self.displayNextThumbnail)
+        #self.workerThread.start()
+        self.displayNextThumbnail()
 
     def isWorkingInBackground(self):
         return self.workerThread is not None and self.workerThread.is_alive()
@@ -92,14 +93,17 @@ class ThumbnailsCarrouselFrame(tk.Frame):
         self.rotateHandler = self.after(CARROUSEL_ROTATION_DELAY, self.rotate)
 
     def showThumbnail(self, i):
-        iconLabel = self.iconsLabels[i]
-        iconLabel.configure(image=self.iconsTkImages[i])
-        iconLabel.grid(row=0, column=0)
+        try:
+            iconLabel = self.iconsLabels[i]
+            iconLabel.configure(image=self.iconsTkImages[i])
+            iconLabel.grid(row=0, column=0)
 
-        descLabel = self.descLabels[i]
-        descLabel.configure(text=self.descriptions[i])
-        descLabel.grid(row=0, column=1)
+            descLabel = self.descLabels[i]
+            descLabel.configure(text=self.descriptions[i])
+            descLabel.grid(row=0, column=1)
 
-        thumbLabel = self.thumbnailsLabels[i]
-        thumbLabel.configure(image=self.thumbnailsTkImages[i])
-        thumbLabel.grid(row=1, column=0, columnspan=2)
+            thumbLabel = self.thumbnailsLabels[i]
+            thumbLabel.configure(image=self.thumbnailsTkImages[i])
+            thumbLabel.grid(row=1, column=0, columnspan=2)
+        except:
+            pass
