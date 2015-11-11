@@ -98,7 +98,7 @@ class ThumbnailsCarrouselFrame(tk.Frame):
             return ''
 
         sp = description.split('-')
-        if len(sp > 1):
+        if len(sp) > 1:
             return sp[1].strip()
         else:
             return description
