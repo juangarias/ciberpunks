@@ -257,8 +257,8 @@ class FaceIDApp():
         self.socialNetworkIterator = SocialNetworkIterator(getList(result, 'socialProfiles'))
         self.rotateWebData()
 
-        twitterThumbs = [t for t in thumbnails if 'twitter.com' in t[2]]
-        others = [t for t in thumbnails if 'twitter.com' not in t[2]]
+        twitterThumbs = [t for t in thumbnails if t[2] is not None and 'twitter.com' in t[2]]
+        others = [t for t in thumbnails if t[2] is not None and 'twitter.com' not in t[2]]
 
         self.thumbnailsCarrousel.start(twitterThumbs[:2] + others)
 

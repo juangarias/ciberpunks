@@ -56,7 +56,7 @@ def searchPipl(email):
 
     try:
         soup = BeautifulSoup(page, 'html.parser')
-        # logging.debug('Search return OK {0}.'.format(soup.prettify()))
+        # print soup.prettify()
 
         linkDivs = soup.find_all('div', class_='line1 truncate')
         links = map(extractSanitizedResultLink, linkDivs)
@@ -65,16 +65,28 @@ def searchPipl(email):
         thumbnails = []
         webResults = soup.find_all('div', class_='profile_result group')
         for result in webResults:
-            div = result.find('div', class_='line2 truncate')
-            img = result.find('img', class_='thumbnail single_person hidden')
+            iconUrl = None
+            imgSrc = None
+            description = ''
 
-            if div is not None and img is not None and not img['src'].startswith('/static'):
+            imgHtml = result.find('img', class_='thumbnail single_person')
+            imgSrcRaw = safeGetAttr(imgHtml, 'data-src')
+            if imgSrcRaw is not None and not imgSrcRaw.startswith('/static'):
+                imgSrc = imgHtml['data-src']
+
+            div = result.find('div', class_='line2')
+            if div is not None:
                 description = ''
-                for s in div.stripped_strings:
-                    description = s
+                if div.span is not None:
+                    description = div.span.string
 
-                iconUrl = 'https://pipl.com' + div.img['src']
-                thumbnails.append((iconUrl, description, img['src']))
+                iconUrlRaw = safeGetAttr(div.img, 'data-src')
+
+                if iconUrlRaw is not None:
+                    iconUrl = 'https://pipl.com' + div.img['data-src']
+
+            if imgSrc is not None:
+                thumbnails.append((iconUrl, description, imgSrc))
 
         profile = extractProfile(soup)
 
@@ -121,9 +133,8 @@ def extractProfile(soup):
     if profileTopDiv is not None:
         logging.debug('Profile top div found!')
         profileImageDiv = profileTopDiv.find('div', {'id': 'profile_image'})
-        if profileImageDiv is not None and profileImageDiv.img is not None and 'src' in profileImageDiv.img:
-            logging.debug('Profile_image found!')
-            profile['mainPicture'] = profileImageDiv.img['src']
+        if profileImageDiv is not None:
+            profile['mainPicture'] = safeGetAttr(profileImageDiv.img, 'src')
 
     profileMiddleDiv = soup.find('div', {'id': 'profile_container_middle'})
     if profileMiddleDiv is not None:
@@ -150,3 +161,10 @@ def extractProfile(soup):
                 profile[fieldKey] = fieldValue
 
     return profile
+
+
+def safeGetAttr(tag, attr):
+    if tag is not None and tag.has_attr(attr):
+        return tag[attr]
+    else:
+        return None
