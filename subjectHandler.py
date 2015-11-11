@@ -58,7 +58,7 @@ class NewSubjectDetectedEventHandler():
         return ret
 
     def drawFaceDecorations(self, image, detectedFaces, name):
-        color = (120, 120, 120)
+        color = (0, 0, 255)
         thickness = 1
         cornerThickness = 4
 

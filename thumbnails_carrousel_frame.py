@@ -46,6 +46,7 @@ class ThumbnailsCarrouselFrame(tk.Frame):
 
     def start(self, thumbnails):
         logging.debug('Starting carrousel of thumbnails in thread {0}...'.format(threading.current_thread().ident))
+        logging.debug('Carrousel of thumbnails count {0}'.format(len(thumbnails)))
         self.thumbnails = thumbnails
         self.thumbnailsIterator = ThumbnailsIterator(self.thumbnails)
         self.rotate()
@@ -85,12 +86,22 @@ class ThumbnailsCarrouselFrame(tk.Frame):
             lastIndex = self.size - 1
 
             self.iconsTkImages[lastIndex] = ImageTk.PhotoImage(icon) if icon is not None else self.emptyIcon
-            self.descriptions[lastIndex] = description.split('-')[1].strip()
+            self.descriptions[lastIndex] = self.extractDisplayDescription(description)
             self.thumbnailsTkImages[lastIndex] = ImageTk.PhotoImage(image) if image is not None else self.emptyThumbnail
 
             self.showThumbnail(lastIndex)
 
         self.rotateHandler = self.after(CARROUSEL_ROTATION_DELAY, self.rotate)
+
+    def extractDisplayDescription(self, description):
+        if description is None:
+            return ''
+
+        sp = description.split('-')
+        if len(sp > 1):
+            return sp[1].strip()
+        else:
+            return description
 
     def showThumbnail(self, i):
         try:

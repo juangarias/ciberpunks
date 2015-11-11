@@ -183,6 +183,9 @@ class FaceIDApp():
             self.rootWindow.after(DISPLAY_ALARM_DELAY, self.showAlarm)
 
     def closeAlarmAlert(self):
+        if self.alertPopup is not None:
+            self.alertPopup.destroy()
+            self.alertPopup = None
         self.changeSubjectFramesColor('black')
 
     def showAlarm(self):
