@@ -130,6 +130,32 @@ def resizeImage(image, size):
 
 
 def readImages(paths, sz=None):
+    images = []
+
+    for path in paths:
+        logging.debug('Reading files from {0}'.format(path))
+        fileCount = 0
+        totalFilesCount = sum([len(files) for r, d, files in os.walk(path)])
+        print 'Reading directory {0}... '.format(path)
+        for dirname, dirnames, filenames in os.walk(path):
+            for filename in filenames:
+                try:
+                    im = cv2.imread(os.path.join(path, filename))
+                    images.append(im)
+                    fileCount += 1
+                    sys.stdout.write("Loaded file {0} of {1}      \r".format(fileCount, totalFilesCount))
+                    sys.stdout.flush()
+                except IOError, (errno, strerror):
+                    print "I/O error({0}): {1}".format(errno, strerror)
+                except:
+                    print "Unexpected error:", sys.exc_info()[0]
+                    raise
+        print('')
+
+    return images
+
+
+def readSubjectsImages(paths, sz=None):
     """Reads the images in a given folder, resizes images on the fly if size is given.
 
     Args:

@@ -3,12 +3,11 @@
 import argparse
 import logging
 import Queue
-from PIL import Image
-from random import randint
 import cv2
 import tkFont
 import Tkinter as tk
-from PIL.ImageTk import PhotoImage
+from PIL import ImageTk
+from random import randint
 from watchdog.observers import Observer
 from watchdogEventHandler import FileCreatedEventHandler
 from common import *
@@ -19,7 +18,7 @@ from thumbnails_carrousel_frame import ThumbnailsCarrouselFrame
 from face_ui_frames import AlertPopup
 
 
-DISPLAY_ALARM_DELAY = 30000
+DISPLAY_ALARM_DELAY = 5000
 TOGGLE_ALARM_DELAY = 250
 MAX_TOGGLE_ALAM_COUNT = 41
 CHECK_PENDING_WORK_DELAY = 2000
@@ -48,7 +47,7 @@ def convertImageCVToTk(image):
 
     # Convert the Image object into a TkPhoto object
     im = Image.fromarray(image)
-    return PhotoImage(image=im)
+    return ImageTk.PhotoImage(image=im)
 
 
 class FaceIDApp():
@@ -67,7 +66,7 @@ class FaceIDApp():
 
         self.haarFolder = args.haarFolder
         self.outputWidth = args.outputWidth
-        self.facesFolder = ['c:/Users/admin/ciberpunks/faces/att_database', 'c:/Users/admin/ciberpunks/faces/news']
+        self.facesFolder = ['/home/juan/ciberpunks/faces/candidatos']
         self.fontFamily = 'System'
 
         self.mainFrame = self.buildMainFrame()
@@ -83,6 +82,7 @@ class FaceIDApp():
         self.alertPopup = None
 
         self.loadFaces()
+        self.showCollectedFaces()
 
         logging.debug('Creating new subject handler...')
         self.newSubjectHandler = NewSubjectDetectedEventHandler(self.haarFolder, self.outputWidth)
@@ -99,13 +99,13 @@ class FaceIDApp():
 
     def loadFaces(self):
         logging.debug('Loading faces from disk...')
-        [self.faces, _, _] = readImages(self.facesFolder)
+        [self.faces, _, _] = readSubjectsImages(self.facesFolder)
         logging.debug('Faces loaded.')
 
     def buildMainFrame(self):
         f = tk.Frame(self.rootWindow)
         im = Image.open('resources/background00.jpg')
-        self.bgImage = PhotoImage(im)
+        self.bgImage = ImageTk.PhotoImage(im)
         bgImageLabel = tk.Label(f, image=self.bgImage, bd=0)
         bgImageLabel.place(x=0, y=0)
         f.pack(fill=tk.BOTH, expand=tk.YES)
@@ -126,8 +126,7 @@ class FaceIDApp():
         self.subjectNameLabel.grid(row=rowCount, column=0)
         rowCount += 1
 
-        self.buildSubjectDataFrame(f)
-        self.subjectDataFrame.grid(row=rowCount, column=0)
+        self.buildSubjectDataFrame(f, rowCount)
         rowCount += 1
 
         f.pack(side=tk.LEFT)
@@ -140,13 +139,13 @@ class FaceIDApp():
         self.listFacesLabel.config(borderwidth=0)
         self.listFacesLabel.pack(side=tk.TOP)
 
-        #self.webPictureLabel = tk.Label(f, height=200, width=200, bd=0, bg='black')
-        #self.webPictureLabel.pack(side=tk.BOTTOM)
+        # self.webPictureLabel = tk.Label(f, height=200, width=200, bd=0, bg='black')
+        # self.webPictureLabel.pack(side=tk.BOTTOM)
 
         f.pack(side=tk.RIGHT)
         return f
 
-    def buildSubjectDataFrame(self, container):
+    def buildSubjectDataFrame(self, container, rowCount):
         self.subjectDataFrame = tk.Frame(container)
 
         self.snType = self.addSubjectField(self.subjectDataFrame, 'Social network:', '', 0)
@@ -155,6 +154,8 @@ class FaceIDApp():
         self.snFollowing = self.addSubjectField(self.subjectDataFrame, 'Following:', '', 3)
         self.snURL = self.addSubjectField(self.subjectDataFrame, 'URL:', '', 4)
         self.snBio = self.addSubjectField(self.subjectDataFrame, 'Bio:', '', 5)
+
+        self.subjectDataFrame.grid(row=rowCount, column=0)
 
     def addSubjectField(self, container, name, value, row):
         labelFont = tkFont.Font(family=self.fontFamily, size=12)
@@ -175,10 +176,9 @@ class FaceIDApp():
             self.thumbnailsCarrousel.stop()
             self.closeAlarmAlert()
             logging.info('New subject found!')
-            name, email, img = self.newSubjectHandler.newSubject(self.subjectsQueue.get())
+            name, email, img, rawImage = self.newSubjectHandler.newSubject(self.subjectsQueue.get())
 
-            self.showDetectedSubject(name, img)
-            self.showCollectedFaces()
+            self.showDetectedSubject(name, img, rawImage)
             self.launchSearch(name, email)
             self.rootWindow.after(DISPLAY_ALARM_DELAY, self.showAlarm)
 
@@ -189,7 +189,7 @@ class FaceIDApp():
         self.changeSubjectFramesColor('black')
 
     def showAlarm(self):
-        self.alertPopup = AlertPopup(-800, 0)
+        self.alertPopup = AlertPopup(400, 200)
         self.toggleAlarmCount = 0
         self.toggleAlarm()
 
@@ -217,12 +217,17 @@ class FaceIDApp():
             w.configure(bg=color, fg=fgColor)
             w.grid()
 
-    def showDetectedSubject(self, name, image):
+    def showDetectedSubject(self, name, image, rawImage):
         logging.debug('Showing detected subject {0}'.format(name))
+        self.showDetectedSubjectName(name)
+        self.showDetectedSubjectPicture(image)
+
+    def showDetectedSubjectName(self, name):
         if name is not None:
             self.subjectNameLabel.configure(text=name.title())
             self.subjectNameLabel.grid()
 
+    def showDetectedSubjectPicture(self, image):
         if image is not None:
             self.subjectImage = convertImageCVToTk(image)
             self.subjectPictureLabel.configure(image=self.subjectImage)
@@ -241,7 +246,7 @@ class FaceIDApp():
         self.listFacesLabel.configure(image=self.randomSubjectImage)
         self.listFacesLabel.pack()
 
-        self.rootWindow.after(100, self.showCollectedFaces)
+        self.rootWindow.after(125, self.showCollectedFaces)
 
     def launchSearch(self, name, email):
         result = searchFullContact(email)

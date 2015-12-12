@@ -77,9 +77,8 @@ def main():
                     lCenter = calculateCenter(leftEye[0])
                     rCenter = calculateCenter(rightEye[0])
                     logging.debug("Cropping face. Left eye center {0}. Right eye center {1}".format(lCenter, rCenter))
-                    cropped = cropFace(image, rCenter, lCenter)
-                    grayCropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
-                    cv2.imwrite(buildFileName(contador, args.outFolder), grayCropped, formatParams)
+                    cropped = image[y:y+h, x:x+w]
+                    cv2.imwrite(buildFileName(contador, args.outFolder), cropped, formatParams)
                     contador += 1
 
                     drawRectangle(image, (x, y, w, h), rectColor, rectThickness)

@@ -72,9 +72,11 @@ class ThumbnailsCarrouselFrame(tk.Frame):
         for i in xrange(0, self.size - 2):
             self.showThumbnail(i)
 
-        #self.workerThread = threading.Thread(target=self.displayNextThumbnail)
-        #self.workerThread.start()
-        self.displayNextThumbnail()
+        self.workerThread = threading.Thread(target=self.displayNextThumbnail)
+        self.workerThread.start()
+
+        # For windows, to avoid using threads
+        # self.displayNextThumbnail()
 
     def isWorkingInBackground(self):
         return self.workerThread is not None and self.workerThread.is_alive()
